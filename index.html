@@ -1,0 +1,1512 @@
+<!DOCTYPE html>
+<html lang="uk">
+<head>
+ <meta charset="UTF-8">
+ <meta name="viewport" content="width=device-width, initial-scale=1.0">
+ <title>Marteloscope tree data</title>
+
+ <!-- Tailwind CSS -->
+ <script src="https://cdn.tailwindcss.com"></script>
+
+ <!-- Leaflet CSS & JS (Map) -->
+ <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin=""/>
+ <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
+
+ <!-- Lucide Icons -->
+ <script src="https://unpkg.com/lucide@latest"></script>
+
+ <style>
+ @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700&display=swap');
+ body { font-family: 'Inter', sans-serif; }
+ #map { height: 100%; width: 100%; border-radius: 0.5rem; z-index: 0; }
+ .glass-panel {
+ background: rgba(255, 255, 255, 0.98);
+ border: 1px solid rgba(229, 231, 235, 0.8);
+ }
+ /* Custom scrollbar */
+ ::-webkit-scrollbar { width: 6px; }
+ ::-webkit-scrollbar-track { background: #f1f1f1; }
+ ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 3px; }
+ ::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
+
+ .tree-marker { transition: all 0.3s ease; }
+ .tree-marker:hover { transform: scale(1.2); z-index: 1000 !important; }
+
+ #xyCanvas { background-color: #f8fafc; border: 1px solid #e2e8f0; border-radius: 4px; cursor: crosshair; }
+
+ /* Remove arrows from number input */
+ input[type=number]::-webkit-inner-spin-button,
+ input[type=number]::-webkit-outer-spin-button { -webkit-appearance: none; margin: 0; }
+
+ /* Picking mode cursor */
+ .map-picking { cursor: crosshair !important; }
+ .map-picking .leaflet-grab { cursor: crosshair !important; }
+ </style>
+</head>
+<body class="bg-slate-100 text-slate-800 h-screen flex flex-col overflow-hidden">
+
+ <!-- Header -->
+ <header class="bg-emerald-900 text-white p-3 shadow-lg shrink-0 z-20 flex justify-between items-center">
+ <div class="flex items-center gap-2 px-2">
+ <i data-lucide="tree-deciduous" class="w-6 h-6 text-emerald-400"></i>
+ <div>
+ <h1 class="text-lg font-bold leading-tight">Marteloscope tree data</h1>
+ <p class="text-[10px] text-emerald-300 opacity-80">Forestry Mapping Tool</p>
+ </div>
+ </div>
+ <button onclick="clearStorage()" class="text-xs bg-emerald-800 hover:bg-red-700 px-2 py-1 rounded transition" title="Скинути всі дані">
+ Скинути проект
+ </button>
+ </header>
+
+ <!-- Main Layout -->
+ <div class="flex flex-grow overflow-hidden">
+
+ <!-- Sidebar (Controls) -->
+ <aside class="w-full md:w-[480px] bg-white shadow-xl z-10 flex flex-col overflow-hidden border-r border-slate-200">
+
+ <!-- Tabs Navigation -->
+ <div class="flex border-b border-slate-200 shrink-0 bg-slate-50 overflow-x-auto">
+ <button onclick="switchTab('centers')" id="tab-centers" class="min-w-[70px] flex-1 py-3 text-[10px] sm:text-xs font-bold uppercase tracking-wide text-emerald-700 border-b-2 border-emerald-600 bg-white">
+ 1. Точки
+ </button>
+ <button onclick="switchTab('trees')" id="tab-trees" class="min-w-[70px] flex-1 py-3 text-[10px] sm:text-xs font-bold uppercase tracking-wide text-slate-500 hover:text-emerald-600">
+ 2. Ввід
+ </button>
+ <button onclick="switchTab('list')" id="tab-list" class="min-w-[70px] flex-1 py-3 text-[10px] sm:text-xs font-bold uppercase tracking-wide text-slate-500 hover:text-emerald-600">
+ 3. Таблиця
+ </button>
+ <button onclick="switchTab('xy')" id="tab-xy" class="min-w-[70px] flex-1 py-3 text-[10px] sm:text-xs font-bold uppercase tracking-wide text-slate-500 hover:text-emerald-600">
+ 4. X/Y
+ </button>
+ <button onclick="switchTab('sylvo')" id="tab-sylvo" class="min-w-[70px] flex-1 py-3 text-[10px] sm:text-xs font-bold uppercase tracking-wide text-slate-500 hover:text-emerald-600">
+ 5. Sylvo
+ </button>
+ </div>
+
+ <!-- Tab Content: Centers & Panoramas -->
+ <div id="content-centers" class="flex-grow flex flex-col overflow-y-auto p-4 space-y-4">
+ <div class="bg-slate-50 p-4 rounded-lg border border-slate-200 shadow-sm">
+ <h3 class="text-sm font-bold text-slate-700 mb-3 flex items-center gap-2">
+ <i data-lucide="map-pin" class="w-4 h-4 text-emerald-600"></i> Додати точку
+ </h3>
+
+ <!-- Point Type Toggle -->
+ <div class="flex mb-3 bg-slate-200 p-1 rounded text-[10px]">
+ <button onclick="setPointType('center')" id="type-center" class="flex-1 py-1.5 rounded shadow-sm bg-white font-bold text-red-700 transition flex items-center justify-center gap-1">
+ <span class="w-2 h-2 bg-red-500 rounded-full inline-block"></span> Центр
+ </button>
+ <button onclick="setPointType('panorama')" id="type-panorama" class="flex-1 py-1.5 rounded text-purple-700 font-medium hover:text-purple-900 transition flex items-center justify-center gap-1">
+ <i data-lucide="camera" class="w-3 h-3"></i> Панорама
+ </button>
+ </div>
+
+ <!-- Input Mode Toggle -->
+ <div class="flex mb-3 border-t border-slate-200 pt-3">
+ <div class="flex bg-slate-100 p-0.5 rounded text-[10px] w-full">
+ <button onclick="setCenterMode('absolute')" id="mode-absolute" class="flex-1 py-1 rounded shadow-sm bg-white font-bold text-slate-800 transition">Координати / GPS / Карта</button>
+ <button onclick="setCenterMode('relative')" id="mode-relative" class="flex-1 py-1 rounded text-slate-500 font-medium hover:text-slate-800 transition">Від іншого центру</button>
+ </div>
+ </div>
+
+ <div class="space-y-3">
+ <input type="text" id="centerName" placeholder="Назва (напр. Сектор А)" class="w-full p-2 text-sm border rounded focus:ring-2 focus:ring-emerald-500 outline-none">
+
+ <!-- Absolute Mode Inputs -->
+ <div id="inputs-absolute" class="space-y-2">
+ <div class="grid grid-cols-2 gap-2">
+ <input type="number" id="centerLat" step="any" placeholder="Широта (Lat)" class="p-2 text-sm border rounded">
+ <input type="number" id="centerLon" step="any" placeholder="Довгота (Lon)" class="p-2 text-sm border rounded">
+ </div>
+ <button onclick="togglePickOnMap()" id="pickMapBtn" class="w-full py-2 bg-slate-200 hover:bg-slate-300 text-slate-700 text-xs rounded transition flex items-center justify-center gap-1">
+ <i data-lucide="mouse-pointer-click" class="w-3 h-3"></i> Вказати точку на карті
+ </button>
+ <button onclick="getCurrentLocation()" class="w-full py-2 bg-slate-200 hover:bg-slate-300 text-slate-700 text-xs rounded transition flex items-center justify-center gap-1">
+ <i data-lucide="crosshair" class="w-3 h-3"></i> Взяти GPS з пристрою
+ </button>
+ </div>
+
+ <!-- Relative Mode Inputs -->
+ <div id="inputs-relative" class="hidden space-y-2">
+ <div>
+ <label class="block text-[10px] font-bold text-slate-400 uppercase mb-1">Базова точка (Центр)</label>
+ <select id="refCenterSelect" class="w-full p-2 border border-slate-300 rounded text-sm bg-white"></select>
+ </div>
+ <div class="grid grid-cols-2 gap-2">
+ <div class="relative">
+ <label class="block text-[10px] font-bold text-slate-400 uppercase mb-1">Азимут (°)</label>
+ <input type="number" id="centerAz" step="any" placeholder="0-360" class="w-full p-2 text-sm border rounded">
+ </div>
+ <div>
+ <label class="block text-[10px] font-bold text-slate-400 uppercase mb-1">Відстань (м)</label>
+ <input type="number" id="centerDist" step="any" placeholder="Метри" class="w-full p-2 text-sm border rounded">
+ </div>
+ </div>
+ <p class="text-[10px] text-slate-400 italic text-center">Для збігу точок введіть відстань 0</p>
+ </div>
+
+ <button onclick="addPoint()" id="addPointBtn" class="w-full py-2 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold rounded transition shadow-sm flex items-center justify-center gap-2 mt-2">
+ <i data-lucide="plus" class="w-4 h-4"></i> Додати точку
+ </button>
+ </div>
+ </div>
+
+ <div class="flex-grow">
+ <h3 class="text-[10px] font-bold text-slate-400 uppercase mb-2 tracking-wider">Список точок</h3>
+ <ul id="centersList" class="space-y-2"></ul>
+ </div>
+ </div>
+
+ <!-- Tab Content: Trees Input -->
+ <div id="content-trees" class="hidden flex-grow flex flex-col overflow-y-auto p-4 space-y-4">
+
+ <div class="bg-blue-50 p-4 rounded-lg border border-blue-100">
+ <label class="block text-[10px] font-bold text-blue-800 uppercase mb-1">Робочий центр</label>
+ <select id="activeCenterSelect" class="w-full p-2 border border-blue-300 rounded text-sm bg-white font-semibold text-blue-900">
+ <option value="">Спочатку додайте центри...</option>
+ </select>
+ </div>
+
+ <div class="bg-white p-4 rounded-lg border border-slate-200 shadow-sm flex-grow flex flex-col">
+ <div class="flex justify-between items-center mb-2">
+ <label class="block text-xs font-bold text-slate-700 uppercase">Дані дерев (CSV)</label>
+ <button onclick="insertSampleData()" class="text-[10px] text-emerald-600 hover:underline">Вставити приклад</button>
+ </div>
+
+ <div class="mb-3 flex-grow">
+ <div class="bg-slate-100 text-[10px] p-2 rounded mb-2 text-slate-600 border border-slate-200 font-mono">
+ Формат: Номер, Азимут, Відстань, Порода, Діаметр (см), Висота (м)
+ </div>
+ <textarea id="csvInput" class="w-full h-40 p-2 text-xs font-mono border border-slate-300 rounded focus:ring-2 focus:ring-emerald-500 outline-none resize-none" placeholder="1, 45, 12.5, Сосна, 32, 24&#10;2, 120, 8.3, Дуб, 44, 21&#10;3, 270, 15.0, Береза, 28, 19"></textarea>
+ </div>
+
+ <div class="flex gap-2">
+ <input type="file" id="fileUpload" accept=".csv,.txt" class="hidden" onchange="handleFileUpload(this)">
+ <button onclick="document.getElementById('fileUpload').click()" class="flex-1 py-2 border border-slate-300 hover:bg-slate-50 text-slate-600 text-xs rounded flex items-center justify-center gap-1 font-medium">
+ <i data-lucide="upload" class="w-3 h-3"></i> Імпорт файлу
+ </button>
+ <button onclick="processTrees()" class="flex-1 py-2 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold rounded shadow-sm flex items-center justify-center gap-1">
+ <i data-lucide="calculator" class="w-3 h-3"></i> Розрахувати
+ </button>
+ </div>
+ </div>
+ </div>
+
+ <!-- Tab Content: Tree List -->
+ <div id="content-list" class="hidden flex-grow flex flex-col overflow-hidden">
+ <div class="p-3 bg-slate-50 border-b flex justify-between items-center">
+ <h3 class="text-xs font-bold text-slate-700 uppercase">Список дерев</h3>
+ <div class="text-xs text-emerald-700 font-bold">Всього: <span id="totalTreesCount">0</span></div>
+ </div>
+ <div class="flex-grow overflow-y-auto p-0">
+ <table class="w-full text-left text-xs">
+ <thead class="bg-slate-100 text-slate-500 sticky top-0 z-10 shadow-sm">
+ <tr>
+ <th class="p-2 font-medium">№</th>
+ <th class="p-2 font-medium">Lat / Lon</th>
+ <th class="p-2 font-medium">Порода</th>
+ <th class="p-2 font-medium">D (см)</th>
+ <th class="p-2 font-medium">H (м)</th>
+ <th class="p-2 font-medium text-right">Дія</th>
+ </tr>
+ </thead>
+ <tbody id="treesTableBody" class="divide-y divide-slate-100">
+ <!-- Rows -->
+ </tbody>
+ </table>
+ </div>
+ <div class="p-3 border-t bg-slate-50">
+ <button onclick="downloadAllData()" class="w-full py-2 bg-blue-600 hover:bg-blue-700 text-white text-sm font-bold rounded shadow-sm flex items-center justify-center gap-2">
+ <i data-lucide="download" class="w-4 h-4"></i> Експорт Excel (CSV)
+ </button>
+ </div>
+ </div>
+
+ <!-- Tab Content: Cartesian (X/Y) -->
+ <div id="content-xy" class="hidden flex-grow flex flex-col overflow-y-auto p-4 space-y-4">
+ <div class="bg-amber-50 p-4 rounded-lg border border-amber-200">
+ <h3 class="text-sm font-bold text-amber-800 mb-2 flex items-center gap-2">
+ <i data-lucide="axis-3d" class="w-4 h-4"></i> Трансформація координат
+ </h3>
+ <p class="text-[10px] text-amber-700 mb-3">
+ Перетворення GPS (Lat/Lon) у локальну плоску систему (X/Y в метрах) з можливістю обертання.
+ </p>
+
+ <div class="space-y-4">
+ <div>
+ <label class="block text-[10px] font-bold text-amber-800 uppercase mb-1">Центр координат (0,0)</label>
+ <select id="originSelect" class="w-full p-2 border border-amber-300 rounded text-sm bg-white text-amber-900 font-medium" onchange="updateXYPreview()">
+ <option value="">Оберіть центр...</option>
+ </select>
+ </div>
+
+ <div>
+ <label class="block text-[10px] font-bold text-amber-800 uppercase mb-1">Кут повороту (°)</label>
+ <div class="flex items-center gap-2 mb-2">
+ <button onclick="changeRotation(-1)" class="w-8 h-8 flex items-center justify-center bg-white border border-amber-300 hover:bg-amber-100 rounded text-amber-900 font-bold shadow-sm transition">-</button>
+ <input type="number" id="rotationInput" value="0" min="-180" max="180" class="flex-grow h-8 text-sm text-center border border-amber-300 rounded font-mono focus:ring-2 focus:ring-amber-500 outline-none" oninput="syncRotation('input')">
+ <button onclick="changeRotation(1)" class="w-8 h-8 flex items-center justify-center bg-white border border-amber-300 hover:bg-amber-100 rounded text-amber-900 font-bold shadow-sm transition">+</button>
+ </div>
+ <input type="range" id="rotationSlider" min="-180" max="180" value="0" step="1" class="w-full h-2 bg-amber-200 rounded-lg appearance-none cursor-pointer accent-amber-600" oninput="syncRotation('slider')">
+ <div class="flex justify-between text-[10px] text-amber-400 mt-1 font-mono">
+ <span>-180°</span>
+ <span>0°</span>
+ <span>+180°</span>
+ </div>
+ </div>
+
+ <!-- Preview Canvas -->
+ <div class="relative w-full aspect-square bg-white border rounded shadow-inner flex items-center justify-center overflow-hidden">
+ <canvas id="xyCanvas" class="w-full h-full"></canvas>
+ <div class="absolute top-2 left-2 text-[10px] text-slate-400 font-mono">Y axis ↑</div>
+ <div class="absolute bottom-2 right-2 text-[10px] text-slate-400 font-mono">X axis →</div>
+ </div>
+
+ <div class="space-y-2">
+ <button onclick="downloadXYData()" class="w-full py-2 bg-emerald-700 hover:bg-emerald-800 text-white text-sm font-bold rounded shadow-sm flex items-center justify-center gap-2">
+ <i data-lucide="file-down" class="w-4 h-4"></i> Завантажити X/Y (.csv)
+ </button>
+ <div class="grid grid-cols-2 gap-2">
+ <button onclick="downloadCentersXYData()" class="w-full py-2 bg-amber-600 hover:bg-amber-700 text-white text-xs font-bold rounded shadow-sm flex items-center justify-center gap-1">
+ <i data-lucide="map" class="w-3 h-3"></i> Експорт Центрів
+ </button>
+ <button onclick="downloadPanoramasXYData()" class="w-full py-2 bg-purple-600 hover:bg-purple-700 text-white text-xs font-bold rounded shadow-sm flex items-center justify-center gap-1">
+ <i data-lucide="camera" class="w-3 h-3"></i> Експорт Панорам
+ </button>
+ </div>
+ </div>
+ </div>
+ </div>
+ </div>
+
+ <!-- Tab Content: Sylvotech -->
+ <div id="content-sylvo" class="hidden flex-grow flex flex-col overflow-y-auto p-4 space-y-4">
+ <div class="bg-indigo-50 p-4 rounded-lg border border-indigo-200">
+ <h3 class="text-sm font-bold text-indigo-800 mb-2 flex items-center gap-2">
+ <i data-lucide="table-2" class="w-4 h-4"></i> Експорт Sylvotech
+ </h3>
+ <p class="text-[10px] text-indigo-700 mb-4">
+ Вкажіть числові ID для кожної породи. Координати будуть взяті з поворотом, вказаним у вкладці 4.
+ </p>
+
+ <!-- ID Search Block -->
+ <div class="bg-white p-3 rounded border border-indigo-100 shadow-sm mb-4">
+ <label class="block text-[10px] font-bold text-slate-500 uppercase mb-1">Пошук ID (Довідник)</label>
+ <div class="relative">
+ <input type="text" placeholder="Почніть вводити назву (напр. Береза)..."
+ class="w-full p-2 text-xs border border-indigo-200 rounded focus:ring-1 focus:ring-indigo-500 outline-none"
+ oninput="searchSylvoId(this.value)">
+ <div id="sylvoSearchResults" class="absolute left-0 right-0 top-full mt-1 bg-white border border-indigo-100 rounded shadow-lg max-h-40 overflow-y-auto z-10 hidden">
+ <!-- Search results -->
+ </div>
+ </div>
+ </div>
+
+ <!-- Auto-fill Button -->
+ <button onclick="autoFillSylvoIds()" class="w-full py-1.5 bg-white border border-indigo-300 hover:bg-indigo-50 text-indigo-700 text-xs font-medium rounded mb-3 flex items-center justify-center gap-1 shadow-sm transition">
+ <i data-lucide="wand-2" class="w-3 h-3"></i> Спроба автозаповнення
+ </button>
+
+ <div id="speciesMappingList" class="space-y-2 mb-4">
+ <!-- Inputs generated by JS -->
+ <div class="text-xs text-slate-400 italic">Немає порід для відображення</div>
+ </div>
+
+ <button onclick="downloadSylvoData()" class="w-full py-2 bg-indigo-700 hover:bg-indigo-800 text-white text-sm font-bold rounded shadow-sm flex items-center justify-center gap-2">
+ <i data-lucide="download" class="w-4 h-4"></i> Завантажити Sylvotech.csv
+ </button>
+ </div>
+ </div>
+
+ <!-- Footer -->
+ <div class="p-2 bg-slate-800 text-[10px] text-center text-slate-400">
+ <span id="storageStatus" class="text-emerald-400">Автозбереження активне</span> | WGS84
+ </div>
+ </aside>
+
+ <!-- Map Area -->
+ <main class="flex-grow relative bg-slate-200">
+ <div id="map" class="h-full w-full"></div>
+
+ <!-- Picking mode banner -->
+ <div id="pickBanner" class="hidden absolute top-4 left-1/2 -translate-x-1/2 bg-emerald-700 text-white text-xs font-bold px-4 py-2 rounded-full shadow-lg z-[500] flex items-center gap-2">
+ <i data-lucide="mouse-pointer-click" class="w-3 h-3"></i>
+ <span id="pickBannerText">Клацніть на карті, щоб задати координати</span>
+ <button onclick="togglePickOnMap()" class="ml-2 bg-emerald-900 hover:bg-red-600 px-2 py-0.5 rounded-full transition">Esc</button>
+ </div>
+
+ <!-- Dynamic Legend (Moved to bottom left) -->
+ <div id="mapLegend" class="absolute bottom-6 left-6 bg-white/95 backdrop-blur p-3 rounded-lg shadow-lg z-[400] min-w-[140px] max-h-[300px] overflow-y-auto border border-slate-200">
+ <h4 class="text-xs font-bold mb-2 text-slate-700 border-b pb-1">Легенда</h4>
+ <div class="flex items-center gap-2 mb-1">
+ <div class="w-3 h-3 rounded-full bg-red-500 border border-white shadow-sm"></div>
+ <span class="text-xs text-slate-600">Центр ділянки</span>
+ </div>
+ <div class="flex items-center gap-2 mb-1.5">
+ <i data-lucide="camera" class="w-3 h-3 text-purple-600"></i>
+ <span class="text-xs text-slate-600">Панорама</span>
+ </div>
+ <!-- Species items will be injected here -->
+ <div id="speciesLegend"></div>
+ </div>
+ </main>
+
+ </div>
+
+ <!-- Notification Toast -->
+ <div id="toast" class="fixed bottom-5 right-5 bg-slate-800 text-white px-4 py-2 rounded shadow-lg transform translate-y-20 transition-transform duration-300 z-[1000] text-sm flex items-center gap-2">
+ <i data-lucide="info" class="w-4 h-4 text-blue-400"></i> <span id="toastMsg">Notification</span>
+ </div>
+
+ <script>
+ // --- Configuration ---
+ const speciesColors = {
+ 'сосна': '#166534', // green-800
+ 'ялина': '#064e3b', // emerald-900
+ 'дуб': '#854d0e', // yellow-800 (brownish)
+ 'береза': '#94a3b8', // slate-400
+ 'вільха': '#78350f', // amber-900
+ 'осика': '#a3e635', // lime-400
+ 'default': '#000000' // black
+ };
+
+ const R_earth = 6371e3;
+
+ // Sylvo Database
+ const sylvoSpeciesDB = [
+ {id: 12, name: "Береза повисла"}, {id: 40, name: "Берека"}, {id: 66, name: "Берест"},
+ {id: 57, name: "Бук звичайний (лісовий)"}, {id: 19, name: "Бук лісовий"}, {id: 36, name: "Верба"},
+ {id: 54, name: "Верба козяча"}, {id: 25, name: "Вільха"}, {id: 37, name: "Вільха сіра"},
+ {id: 14, name: "Вільха чорна"}, {id: 17, name: "В'яз"}, {id: 65, name: "В'яз гладкий"},
+ {id: 47, name: "Гіркокаштан звичайний"}, {id: 41, name: "Горіх волоський"}, {id: 38, name: "Горобина звичайна"},
+ {id: 10, name: "Горобина круглолиста"}, {id: 16, name: "Граб звичайний"}, {id: 64, name: "Груша звичайна"},
+ {id: 15, name: "Дуб"}, {id: 32, name: "Дуб пухнастий"}, {id: 33, name: "Дуб скельний"},
+ {id: 34, name: "Дуб червоний"}, {id: 58, name: "Дуб червоний"}, {id: 45, name: "Інші листяні породи"},
+ {id: 46, name: "Інші хвойні породи"}, {id: 13, name: "Каштан їстівний"}, {id: 23, name: "Клен"},
+ {id: 31, name: "Клен гостролистий"}, {id: 24, name: "Клен калинолистий"}, {id: 9, name: "Клен польовий"},
+ {id: 20, name: "Клен-явір"}, {id: 8, name: "Липа"}, {id: 48, name: "Липа серцелиста"},
+ {id: 49, name: "Липа широколиста"}, {id: 59, name: "Ліщина ведмежа"}, {id: 55, name: "Ліщина звичайна"},
+ {id: 3, name: "Модрина європейська"}, {id: 30, name: "Осика"}, {id: 62, name: "Падуб звичайний"},
+ {id: 5, name: "Псевдотсуга Мензіса (дугласія)"}, {id: 39, name: "Робінія звичайна"}, {id: 42, name: "Сосна Веймутова"},
+ {id: 28, name: "Сосна гірська"}, {id: 4, name: "Сосна звичайна"}, {id: 51, name: "Сосна чорна"},
+ {id: 52, name: "Сосна чорна"}, {id: 6, name: "Тис ягідний"}, {id: 61, name: "Тополя біла"},
+ {id: 22, name: "Туя"}, {id: 60, name: "Черемха звичайна"}, {id: 56, name: "Черемха пізня"},
+ {id: 11, name: "Черешня"}, {id: 63, name: "Яблуня лісова"}, {id: 1, name: "Ялина колюча"},
+ {id: 2, name: "Ялиця біла"}, {id: 7, name: "Ясен звичайний"}
+ ];
+
+ // --- State ---
+ let map;
+ let centers = [];
+ let panoramas = [];
+ let trees = [];
+ let centerMode = 'absolute';
+ let currentPointType = 'center';
+ let uniqueSpecies = new Set();
+ let speciesIdMap = {};
+
+ // Map-picking state
+ let pickingMode = false;
+ let pickMarker = null;
+
+ // --- Init ---
+ window.onload = function() {
+ if (window.lucide) lucide.createIcons();
+ initMap();
+ loadFromStorage();
+
+ if (centers.length > 0 || panoramas.length > 0) {
+ renderCentersList();
+ updateDropdowns();
+ renderTreeTable();
+ updateLegend();
+ }
+
+ // Esc cancels picking mode
+ document.addEventListener('keydown', function(e) {
+ if (e.key === 'Escape' && pickingMode) togglePickOnMap();
+ });
+ };
+
+ function initMap() {
+ map = L.map('map').setView([50.4501, 30.5234], 6);
+
+ // Define Basemaps
+ const osmLayer = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+ maxZoom: 22,
+ attribution: '© OpenStreetMap'
+ });
+
+ // Esri Satellite (High quality, free for public use)
+ const satelliteLayer = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
+ maxZoom: 19,
+ attribution: 'Tiles &copy; Esri &mdash; Source: Esri, i-cubed, USDA, USGS, AEX, GeoEye, Getmapping, Aerogrid, IGN, IGP, UPR-EGP, and the GIS User Community'
+ });
+
+ // Add default layer
+ osmLayer.addTo(map);
+
+ // Add Layer Control
+ const baseMaps = {
+ "Схема (OSM)": osmLayer,
+ "Супутник (Esri)": satelliteLayer
+ };
+
+ L.control.layers(baseMaps, null, { position: 'topright' }).addTo(map);
+
+ // Live coordinate readout
+ const coordBox = L.control({position: 'bottomright'});
+ coordBox.onAdd = function() {
+ const div = L.DomUtil.create('div', '');
+ div.id = 'coordReadout';
+ div.style.cssText = 'background:rgba(255,255,255,.9);padding:3px 8px;border-radius:4px;font:11px monospace;color:#475569;box-shadow:0 1px 3px rgba(0,0,0,.2);';
+ div.innerHTML = '—, —';
+ return div;
+ };
+ coordBox.addTo(map);
+ map.on('mousemove', function(e) {
+ const el = document.getElementById('coordReadout');
+ if (el) el.innerHTML = `${e.latlng.lat.toFixed(6)}, ${e.latlng.lng.toFixed(6)}`;
+ });
+
+ // Click on map = pick coordinates (only in picking mode)
+ map.on('click', function(e) {
+ if (!pickingMode) return;
+ setPickedCoords(e.latlng.lat, e.latlng.lng);
+ });
+ }
+
+ // --- Pick point on map ---
+ window.togglePickOnMap = function() {
+ pickingMode = !pickingMode;
+ const btn = document.getElementById('pickMapBtn');
+ const banner = document.getElementById('pickBanner');
+ const mapEl = document.getElementById('map');
+
+ if (pickingMode) {
+ setCenterMode('absolute');
+ switchTab('centers');
+ btn.className = "w-full py-2 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold rounded transition flex items-center justify-center gap-1";
+ btn.innerHTML = '<i data-lucide="x" class="w-3 h-3"></i> Скасувати вибір на карті';
+ mapEl.classList.add('map-picking');
+ banner.classList.remove('hidden');
+ document.getElementById('pickBannerText').innerText =
+ currentPointType === 'center'
+ ? 'Клацніть на карті — місце центру ділянки'
+ : 'Клацніть на карті — місце панорами';
+ showToast("Клацніть на карті, щоб задати координати");
+ } else {
+ btn.className = "w-full py-2 bg-slate-200 hover:bg-slate-300 text-slate-700 text-xs rounded transition flex items-center justify-center gap-1";
+ btn.innerHTML = '<i data-lucide="mouse-pointer-click" class="w-3 h-3"></i> Вказати точку на карті';
+ mapEl.classList.remove('map-picking');
+ banner.classList.add('hidden');
+ }
+ if (window.lucide) lucide.createIcons();
+ }
+
+ function setPickedCoords(lat, lon) {
+ document.getElementById('centerLat').value = lat.toFixed(6);
+ document.getElementById('centerLon').value = lon.toFixed(6);
+
+ const color = currentPointType === 'center' ? '#ef4444' : '#9333ea';
+ const icon = L.divIcon({
+ className: 'pick-marker',
+ html: `<div style="width:20px;height:20px;border-radius:50%;background:${color};opacity:.5;border:2px dashed #fff;box-shadow:0 0 0 2px ${color};"></div>`,
+ iconSize: [20, 20], iconAnchor: [10, 10]
+ });
+
+ if (pickMarker) {
+ pickMarker.setLatLng([lat, lon]);
+ pickMarker.setIcon(icon);
+ } else {
+ pickMarker = L.marker([lat, lon], { icon, draggable: true, zIndexOffset: 1000 }).addTo(map);
+ pickMarker.on('drag', function(ev) {
+ const ll = ev.target.getLatLng();
+ document.getElementById('centerLat').value = ll.lat.toFixed(6);
+ document.getElementById('centerLon').value = ll.lng.toFixed(6);
+ });
+ pickMarker.on('dragend', function(ev) {
+ const ll = ev.target.getLatLng();
+ pickMarker.setPopupContent(`Обрано:<br>${ll.lat.toFixed(6)}, ${ll.lng.toFixed(6)}<br><i>Можна перетягнути</i>`);
+ });
+ }
+ pickMarker.bindPopup(`Обрано:<br>${lat.toFixed(6)}, ${lon.toFixed(6)}<br><i>Можна перетягнути</i>`).openPopup();
+ }
+
+ function clearPickMarker() {
+ if (pickMarker) { map.removeLayer(pickMarker); pickMarker = null; }
+ if (pickingMode) togglePickOnMap();
+ }
+
+ // Recalculate all trees of a center after it has been moved
+ function recomputeTreesForCenter(center) {
+ trees.filter(t => t.centerId === center.id).forEach(t => {
+ const c = calculateDestination(center.lat, center.lon, t.az, t.dist);
+ t.lat = c.lat; t.lon = c.lon;
+ if (t.marker) t.marker.setLatLng([t.lat, t.lon]);
+ if (t.line) t.line.setLatLngs([[center.lat, center.lon], [t.lat, t.lon]]);
+ });
+ }
+
+ // Inverse task: from center coordinates back to azimuth + distance
+ function calculateAzimuthDistance(lat1, lon1, lat2, lon2) {
+ const p1 = lat1 * Math.PI / 180, p2 = lat2 * Math.PI / 180;
+ const dp = (lat2 - lat1) * Math.PI / 180, dl = (lon2 - lon1) * Math.PI / 180;
+ const a = Math.sin(dp/2)*Math.sin(dp/2) + Math.cos(p1)*Math.cos(p2)*Math.sin(dl/2)*Math.sin(dl/2);
+ const dist = R_earth * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+ const y = Math.sin(dl) * Math.cos(p2);
+ const x = Math.cos(p1)*Math.sin(p2) - Math.sin(p1)*Math.cos(p2)*Math.cos(dl);
+ const az = (Math.atan2(y, x) * 180 / Math.PI + 360) % 360;
+ return { az, dist };
+ }
+
+ // --- Storage Logic ---
+ // Safe wrappers: localStorage can be blocked (private mode / sandboxed iframe)
+ function lsGet(key) { try { return localStorage.getItem(key); } catch (e) { return null; } }
+ function lsSet(key, val) { try { localStorage.setItem(key, val); return true; } catch (e) { return false; } }
+ function lsDel(key) { try { localStorage.removeItem(key); } catch (e) {} }
+
+ function saveToStorage() {
+ const data = {
+ centers: centers.map(c => ({...c, marker: null})),
+ panoramas: panoramas.map(p => ({...p, marker: null})),
+ trees: trees.map(t => ({...t, marker: null, line: null})),
+ speciesIdMap: speciesIdMap
+ };
+ const ok = lsSet('marteloscope_v4', JSON.stringify(data));
+
+ const status = document.getElementById('storageStatus');
+ if (!ok) {
+ status.innerText = "Збереження недоступне";
+ status.className = "text-amber-400";
+ return;
+ }
+ status.innerText = "Збережено";
+ setTimeout(() => status.innerText = "Автозбереження активне", 2000);
+ }
+
+ function loadFromStorage() {
+ // Try loading v4 first, fall back to v3
+ let raw = lsGet('marteloscope_v4');
+ if (!raw) raw = lsGet('marteloscope_v3');
+
+ if (!raw) return;
+
+ try {
+ const data = JSON.parse(raw);
+ data.centers.forEach(c => {
+ const centerObj = { ...c, marker: null };
+ centers.push(centerObj);
+ createCenterMarker(centerObj);
+ });
+
+ // Load panoramas if they exist
+ if (data.panoramas) {
+ data.panoramas.forEach(p => {
+ const panoObj = { ...p, marker: null };
+ panoramas.push(panoObj);
+ createPanoramaMarker(panoObj);
+ });
+ }
+
+ data.trees.forEach(t => {
+ const treeObj = { ...t, marker: null, line: null };
+ trees.push(treeObj);
+ createTreeMarker(treeObj);
+ });
+ if(data.speciesIdMap) speciesIdMap = data.speciesIdMap;
+
+ if (centers.length > 0) {
+ const last = centers[centers.length - 1];
+ map.setView([last.lat, last.lon], 18);
+ }
+ updateTreeCount();
+ } catch (e) {
+ console.error("Save file corrupted", e);
+ showToast("Помилка завантаження збереження");
+ }
+ }
+
+ window.clearStorage = function() {
+ if(confirm("Видалити всі дані і почати заново?")) {
+ lsDel('marteloscope_v4');
+ lsDel('marteloscope_v3');
+ location.reload();
+ }
+ }
+
+ // --- Visual Logic ---
+ function getSpeciesColor(sp) {
+ const normalized = sp.toLowerCase().trim();
+ for (const [key, color] of Object.entries(speciesColors)) {
+ if (normalized.includes(key)) return color;
+ }
+ return speciesColors['default'];
+ }
+
+ function getMarkerRadius(dbh) {
+ if (!dbh) return 4;
+ return Math.max(3, Math.min(15, dbh / 8));
+ }
+
+ function updateLegend() {
+ const legendDiv = document.getElementById('speciesLegend');
+ legendDiv.innerHTML = '';
+
+ uniqueSpecies.clear();
+ trees.forEach(t => { if(t.species) uniqueSpecies.add(t.species.trim()); });
+
+ if (uniqueSpecies.size === 0) {
+ legendDiv.innerHTML = `<div class="text-[10px] text-slate-400 italic">Дерева відсутні</div>`;
+ return;
+ }
+
+ uniqueSpecies.forEach(sp => {
+ const color = getSpeciesColor(sp);
+ const display = sp.charAt(0).toUpperCase() + sp.slice(1);
+
+ const item = document.createElement('div');
+ item.className = 'flex items-center gap-2 mb-1';
+ item.innerHTML = `
+ <div class="w-2.5 h-2.5 rounded-full shadow-sm" style="background-color: ${color}"></div>
+ <span class="text-xs text-slate-600">${display}</span>
+ `;
+ legendDiv.appendChild(item);
+ });
+ }
+
+ // --- Center & Panorama Management ---
+ window.setPointType = function(type) {
+ currentPointType = type;
+ const btnCenter = document.getElementById('type-center');
+ const btnPano = document.getElementById('type-panorama');
+ const addBtn = document.getElementById('addPointBtn');
+ const nameInput = document.getElementById('centerName');
+
+ if (type === 'center') {
+ btnCenter.classList.add('bg-white', 'shadow-sm', 'text-red-700');
+ btnCenter.classList.remove('text-red-500');
+ btnPano.classList.remove('bg-white', 'shadow-sm', 'text-purple-700');
+ btnPano.classList.add('text-purple-500');
+ addBtn.innerHTML = '<i data-lucide="plus" class="w-4 h-4"></i> Додати центр';
+ nameInput.placeholder = "Назва (напр. Сектор А)";
+ } else {
+ btnPano.classList.add('bg-white', 'shadow-sm', 'text-purple-700');
+ btnPano.classList.remove('text-purple-500');
+ btnCenter.classList.remove('bg-white', 'shadow-sm', 'text-red-700');
+ btnCenter.classList.add('text-red-500');
+ addBtn.innerHTML = '<i data-lucide="camera" class="w-4 h-4"></i> Додати панораму';
+ nameInput.placeholder = "Назва (напр. Панорама 1)";
+ }
+
+ // Refresh picking marker colour / banner text if picking is active
+ if (pickingMode) {
+ document.getElementById('pickBannerText').innerText =
+ type === 'center' ? 'Клацніть на карті — місце центру ділянки' : 'Клацніть на карті — місце панорами';
+ if (pickMarker) {
+ const ll = pickMarker.getLatLng();
+ setPickedCoords(ll.lat, ll.lng);
+ }
+ }
+
+ lucide.createIcons();
+ }
+
+ window.setCenterMode = function(mode) {
+ centerMode = mode;
+ document.getElementById('mode-absolute').className = mode === 'absolute' ?
+ "flex-1 py-1 rounded shadow-sm bg-white font-bold text-slate-800 transition" :
+ "flex-1 py-1 rounded text-slate-500 font-medium hover:text-slate-800 transition";
+
+ document.getElementById('mode-relative').className = mode === 'relative' ?
+ "flex-1 py-1 rounded shadow-sm bg-white font-bold text-slate-800 transition" :
+ "flex-1 py-1 rounded text-slate-500 font-medium hover:text-slate-800 transition";
+
+ document.getElementById('inputs-absolute').className = mode === 'absolute' ? "space-y-2" : "hidden space-y-2";
+ document.getElementById('inputs-relative').className = mode === 'relative' ? "space-y-2" : "hidden space-y-2";
+
+ // Leaving absolute mode cancels map picking
+ if (mode !== 'absolute' && pickingMode) togglePickOnMap();
+ }
+
+ window.addPoint = function() {
+ const nameInput = document.getElementById('centerName');
+ const name = nameInput.value || (currentPointType === 'center' ? `Сектор ${centers.length + 1}` : `Панорама ${panoramas.length + 1}`);
+ let lat, lon;
+
+ if (centerMode === 'absolute') {
+ lat = parseFloat(document.getElementById('centerLat').value);
+ lon = parseFloat(document.getElementById('centerLon').value);
+ } else {
+ const refId = document.getElementById('refCenterSelect').value;
+ const az = parseFloat(document.getElementById('centerAz').value);
+ const dist = parseFloat(document.getElementById('centerDist').value);
+ if (!refId || isNaN(az) || isNaN(dist)) { showToast("Перевірте дані"); return; }
+ const ref = centers.find(c => c.id === refId);
+ const coords = calculateDestination(ref.lat, ref.lon, az, dist);
+ lat = coords.lat;
+ lon = coords.lon;
+ }
+
+ if (isNaN(lat) || isNaN(lon)) { showToast("Помилка координат"); return; }
+
+ if (currentPointType === 'center') {
+ const centerObj = {
+ id: Date.now().toString(),
+ name, lat, lon
+ };
+ centers.push(centerObj);
+ createCenterMarker(centerObj);
+ showToast("Центр додано");
+ } else {
+ const panoObj = {
+ id: Date.now().toString(),
+ name, lat, lon
+ };
+ panoramas.push(panoObj);
+ createPanoramaMarker(panoObj);
+ showToast("Панораму додано");
+ }
+
+ nameInput.value = '';
+ document.getElementById('centerLat').value = '';
+ document.getElementById('centerLon').value = '';
+ clearPickMarker();
+
+ renderCentersList();
+ updateDropdowns();
+ map.setView([lat, lon], 19);
+ saveToStorage();
+ }
+
+ function createCenterMarker(c) {
+ const icon = L.divIcon({
+ className: 'custom-center-icon',
+ html: `<div style="background-color:#ef4444; width:14px; height:14px; border-radius:2px; border:2px solid white; box-shadow: 0 1px 3px rgba(0,0,0,0.4); transform: rotate(45deg);"></div>`,
+ iconSize: [14, 14], iconAnchor: [7, 7]
+ });
+ c.marker = L.marker([c.lat, c.lon], {icon, draggable: true}).addTo(map)
+ .bindPopup(`<b>${c.name}</b> (Центр)<br>${c.lat.toFixed(6)}, ${c.lon.toFixed(6)}<br><i>Можна перетягнути</i>`);
+
+ c.marker.on('dragend', function(e) {
+ const ll = e.target.getLatLng();
+ c.lat = ll.lat; c.lon = ll.lng;
+ c.marker.setPopupContent(`<b>${c.name}</b> (Центр)<br>${c.lat.toFixed(6)}, ${c.lon.toFixed(6)}<br><i>Можна перетягнути</i>`);
+ recomputeTreesForCenter(c);
+ renderCentersList(); renderTreeTable(); updateXYPreview(); saveToStorage();
+ showToast("Центр переміщено, дерева перераховано");
+ });
+ }
+
+ function createPanoramaMarker(p) {
+ const icon = L.divIcon({
+ className: 'custom-pano-icon',
+ html: `<div style="background-color:#9333ea; width:20px; height:20px; border-radius:50%; border:2px solid white; display:flex; align-items:center; justify-content:center; box-shadow: 0 1px 3px rgba(0,0,0,0.4);">
+ <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14.5 4h-5L7 7H4a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2h-3l-2.5-3z"/><circle cx="12" cy="13" r="3"/></svg>
+ </div>`,
+ iconSize: [20, 20], iconAnchor: [10, 10]
+ });
+ p.marker = L.marker([p.lat, p.lon], {icon, draggable: true}).addTo(map)
+ .bindPopup(`<b>${p.name}</b> (Панорама)<br>${p.lat.toFixed(6)}, ${p.lon.toFixed(6)}<br><i>Можна перетягнути</i>`);
+
+ p.marker.on('dragend', function(e) {
+ const ll = e.target.getLatLng();
+ p.lat = ll.lat; p.lon = ll.lng;
+ p.marker.setPopupContent(`<b>${p.name}</b> (Панорама)<br>${p.lat.toFixed(6)}, ${p.lon.toFixed(6)}<br><i>Можна перетягнути</i>`);
+ renderCentersList(); updateXYPreview(); saveToStorage();
+ showToast("Панораму переміщено");
+ });
+ }
+
+ // --- Tree Management ---
+ window.processTrees = function() {
+ const centerId = document.getElementById('activeCenterSelect').value;
+ const text = document.getElementById('csvInput').value;
+ if (!centerId || !text.trim()) { showToast("Оберіть центр та введіть дані"); return; }
+
+ const center = centers.find(c => c.id === centerId);
+ const lines = text.split(/\r?\n/);
+ let count = 0;
+
+ lines.forEach(line => {
+ if (!line.trim()) return;
+ const p = line.split(/[,;\t]+/).map(s => s.trim());
+ if (p.length < 3) return;
+
+ const num = p[0];
+ const az = parseFloat(p[1]);
+ const dist = parseFloat(p[2]);
+ const species = p[3] || "Невідомо";
+ const dbh = parseFloat(p[4]) || 0;
+ const height = parseFloat(p[5]) || 0;
+
+ if (isNaN(az) || isNaN(dist)) return;
+
+ const coords = calculateDestination(center.lat, center.lon, az, dist);
+
+ const treeObj = {
+ id: Date.now() + Math.random(),
+ centerId, num, az, dist, species, dbh, height,
+ lat: coords.lat, lon: coords.lon
+ };
+
+ trees.push(treeObj);
+ createTreeMarker(treeObj);
+ count++;
+ });
+
+ if (count > 0) {
+ showToast(`Додано ${count} дерев`);
+ document.getElementById('csvInput').value = "";
+ updateTreeCount();
+ renderTreeTable();
+ updateLegend();
+ saveToStorage();
+
+ const bounds = L.latLngBounds([center.marker.getLatLng()]);
+ trees.filter(t => t.centerId === centerId).forEach(t => bounds.extend(t.marker.getLatLng()));
+ map.fitBounds(bounds, {padding: [50, 50]});
+ }
+ }
+
+ function createTreeMarker(t) {
+ const color = getSpeciesColor(t.species);
+ const radius = getMarkerRadius(t.dbh);
+
+ const icon = L.divIcon({
+ className: 'tree-marker',
+ html: `<div style="background-color:${color}; width:${radius*2}px; height:${radius*2}px; border-radius:50%; border:1px solid white; box-shadow: 0 1px 2px rgba(0,0,0,0.3);"></div>`,
+ iconSize: [radius*2, radius*2],
+ iconAnchor: [radius, radius]
+ });
+
+ t.marker = L.marker([t.lat, t.lon], {icon, draggable: true}).addTo(map)
+ .bindPopup(treePopupHtml(t));
+
+ const center = centers.find(c => c.id === t.centerId);
+ if (center) {
+ t.line = L.polyline([[center.lat, center.lon], [t.lat, t.lon]], {
+ color: color, weight: 1, opacity: 0.2, dashArray: '3, 3'
+ }).addTo(map);
+ }
+
+ // Drag a tree -> azimuth and distance are recalculated from its center
+ t.marker.on('dragend', function(e) {
+ const ll = e.target.getLatLng();
+ const c = centers.find(x => x.id === t.centerId);
+ t.lat = ll.lat; t.lon = ll.lng;
+ if (c) {
+ const inv = calculateAzimuthDistance(c.lat, c.lon, t.lat, t.lon);
+ t.az = parseFloat(inv.az.toFixed(1));
+ t.dist = parseFloat(inv.dist.toFixed(2));
+ if (t.line) t.line.setLatLngs([[c.lat, c.lon], [t.lat, t.lon]]);
+ }
+ t.marker.setPopupContent(treePopupHtml(t));
+ renderTreeTable(); updateXYPreview(); saveToStorage();
+ showToast(`Дерево №${t.num}: Az ${t.az}°, ${t.dist} м`);
+ });
+ }
+
+ function treePopupHtml(t) {
+ return `
+ <div class="text-xs">
+ <b>Дерево №${t.num}</b> (${t.species})<br>
+ D: ${t.dbh} см, H: ${t.height} м<br>
+ Az: ${t.az}°, Dist: ${t.dist}м<br>
+ <i>Можна перетягнути</i>
+ </div>
+ `;
+ }
+
+ window.deleteTree = function(treeId) {
+ const idx = trees.findIndex(t => t.id == treeId);
+ if (idx > -1) {
+ const t = trees[idx];
+ if(t.marker) map.removeLayer(t.marker);
+ if(t.line) map.removeLayer(t.line);
+ trees.splice(idx, 1);
+
+ renderTreeTable();
+ updateTreeCount();
+ updateLegend();
+ saveToStorage();
+ showToast("Дерево видалено");
+ }
+ }
+
+ // --- Cartesian Transformation Logic ---
+ function latLonToMeters(lat, lon, originLat, originLon) {
+ const x = (lon - originLon) * (Math.PI/180) * R_earth * Math.cos(originLat * Math.PI/180);
+ const y = (lat - originLat) * (Math.PI/180) * R_earth;
+ return {x, y};
+ }
+
+ function rotatePoint(x, y, angleDeg) {
+ const rad = angleDeg * Math.PI / 180;
+ const cos = Math.cos(rad);
+ const sin = Math.sin(rad);
+ return {
+ x: x * cos - y * sin,
+ y: x * sin + y * cos
+ };
+ }
+
+ // Sync slider and input
+ window.syncRotation = function(source) {
+ const slider = document.getElementById('rotationSlider');
+ const input = document.getElementById('rotationInput');
+ let val = 0;
+
+ if (source === 'slider') {
+ val = parseInt(slider.value);
+ input.value = val;
+ } else {
+ val = parseInt(input.value);
+ if (isNaN(val)) val = 0;
+ if (val > 180) val = 180;
+ if (val < -180) val = -180;
+ slider.value = val;
+ }
+
+ updateXYPreview();
+ }
+
+ window.changeRotation = function(delta) {
+ const input = document.getElementById('rotationInput');
+ let val = parseInt(input.value) || 0;
+ val += delta;
+ if (val > 180) val = 180;
+ if (val < -180) val = -180;
+
+ input.value = val;
+ syncRotation('input');
+ }
+
+ window.updateXYPreview = function() {
+ if (centers.length === 0) return;
+
+ const canvas = document.getElementById('xyCanvas');
+ const parent = canvas.parentElement;
+ const rot = parseInt(document.getElementById('rotationSlider').value);
+ const originId = document.getElementById('originSelect').value;
+
+ const dpr = window.devicePixelRatio || 1;
+ const rect = parent.getBoundingClientRect();
+
+ if (canvas.width !== rect.width * dpr || canvas.height !== rect.height * dpr) {
+ canvas.width = rect.width * dpr;
+ canvas.height = rect.height * dpr;
+ }
+
+ const ctx = canvas.getContext('2d');
+ ctx.setTransform(1, 0, 0, 1, 0, 0);
+ ctx.scale(dpr, dpr);
+
+ const w = rect.width;
+ const h = rect.height;
+
+ let origin = centers[0];
+ if(originId) {
+ const found = centers.find(c => c.id === originId);
+ if(found) origin = found;
+ }
+
+ const pts = [];
+
+ // Add Centers
+ centers.forEach(c => {
+ const m = latLonToMeters(c.lat, c.lon, origin.lat, origin.lon);
+ const r = rotatePoint(m.x, m.y, rot);
+ pts.push({ x: r.x, y: r.y, color: '#ef4444', type: 'center', name: c.name });
+ });
+
+ // Add Panoramas
+ panoramas.forEach(p => {
+ const m = latLonToMeters(p.lat, p.lon, origin.lat, origin.lon);
+ const r = rotatePoint(m.x, m.y, rot);
+ pts.push({ x: r.x, y: r.y, color: '#9333ea', type: 'panorama', name: p.name });
+ });
+
+ // Add Trees
+ trees.forEach(t => {
+ const m = latLonToMeters(t.lat, t.lon, origin.lat, origin.lon);
+ const r = rotatePoint(m.x, m.y, rot);
+ pts.push({ x: r.x, y: r.y, color: getSpeciesColor(t.species), type: 'tree' });
+ });
+
+ ctx.clearRect(0, 0, w, h);
+
+ if(pts.length === 0) {
+ ctx.font = "12px sans-serif";
+ ctx.fillStyle = "#94a3b8";
+ ctx.textAlign = "center";
+ ctx.fillText("Немає даних для відображення", w/2, h/2);
+ return;
+ }
+
+ let minX = Infinity, maxX = -Infinity, minY = Infinity, maxY = -Infinity;
+ pts.forEach(p => {
+ minX = Math.min(minX, p.x); maxX = Math.max(maxX, p.x);
+ minY = Math.min(minY, p.y); maxY = Math.max(maxY, p.y);
+ });
+
+ if(minX === Infinity) { minX = -10; maxX = 10; minY = -10; maxY = 10; }
+ if(minX === maxX) { minX -= 10; maxX += 10; }
+ if(minY === maxY) { minY -= 10; maxY += 10; }
+
+ const pad = 5;
+ minX -= pad; maxX += pad; minY -= pad; maxY += pad;
+
+ const rangeX = maxX - minX;
+ const rangeY = maxY - minY;
+ const scale = Math.min(w / rangeX, h / rangeY) * 0.9;
+
+ const offsetX = (w - rangeX * scale) / 2;
+ const offsetY = (h - rangeY * scale) / 2;
+
+ ctx.strokeStyle = "#e2e8f0";
+ ctx.beginPath();
+ const zeroX = offsetX + (0 - minX) * scale;
+ const zeroY = h - (offsetY + (0 - minY) * scale);
+ ctx.moveTo(zeroX, 0); ctx.lineTo(zeroX, h);
+ ctx.moveTo(0, zeroY); ctx.lineTo(w, zeroY);
+ ctx.stroke();
+
+ pts.forEach(p => {
+ const cx = offsetX + (p.x - minX) * scale;
+ const cy = h - (offsetY + (p.y - minY) * scale);
+ ctx.fillStyle = p.color;
+
+ if(p.type === 'center') {
+ ctx.fillRect(cx - 3, cy - 3, 6, 6);
+ } else if(p.type === 'panorama') {
+ // Triangle for Panorama
+ ctx.beginPath();
+ ctx.moveTo(cx, cy - 4);
+ ctx.lineTo(cx + 4, cy + 3);
+ ctx.lineTo(cx - 4, cy + 3);
+ ctx.closePath();
+ ctx.fill();
+ } else {
+ ctx.beginPath(); ctx.arc(cx, cy, 2, 0, Math.PI * 2); ctx.fill();
+ }
+ });
+ }
+
+ window.downloadXYData = function() {
+ if (trees.length === 0 && centers.length === 0) { showToast("Немає даних"); return; }
+
+ const rot = parseInt(document.getElementById('rotationSlider').value);
+ const originId = document.getElementById('originSelect').value;
+ let origin = centers[0];
+ if(originId) {
+ const found = centers.find(c => c.id === originId);
+ if(found) origin = found;
+ }
+
+ let csv = "Type,Name_Num,Species,DBH,Height,Original_Lat,Original_Lon,X_Local,Y_Local,Rotated_X,Rotated_Y\n";
+
+ centers.forEach(c => {
+ const m = latLonToMeters(c.lat, c.lon, origin.lat, origin.lon);
+ const r = rotatePoint(m.x, m.y, rot);
+ csv += `"Center","${c.name}","-",0,0,${c.lat},${c.lon},${m.x.toFixed(3)},${m.y.toFixed(3)},${r.x.toFixed(3)},${r.y.toFixed(3)}\n`;
+ });
+
+ panoramas.forEach(p => {
+ const m = latLonToMeters(p.lat, p.lon, origin.lat, origin.lon);
+ const r = rotatePoint(m.x, m.y, rot);
+ csv += `"Panorama","${p.name}","-",0,0,${p.lat},${p.lon},${m.x.toFixed(3)},${m.y.toFixed(3)},${r.x.toFixed(3)},${r.y.toFixed(3)}\n`;
+ });
+
+ trees.forEach(t => {
+ const m = latLonToMeters(t.lat, t.lon, origin.lat, origin.lon);
+ const r = rotatePoint(m.x, m.y, rot);
+ csv += `"Tree","${t.num}","${t.species}",${t.dbh},${t.height},${t.lat},${t.lon},${m.x.toFixed(3)},${m.y.toFixed(3)},${r.x.toFixed(3)},${r.y.toFixed(3)}\n`;
+ });
+
+ const blob = new Blob(["﻿" + csv], { type: 'text/csv;charset=utf-8;' });
+ const link = document.createElement("a");
+ link.href = URL.createObjectURL(blob);
+ link.download = `cartesian_all_rot${rot}_${new Date().toISOString().slice(0,10)}.csv`;
+ link.click();
+ }
+
+ window.downloadCentersXYData = function() {
+ if (centers.length === 0) { showToast("Немає центрів"); return; }
+ const rot = parseInt(document.getElementById('rotationSlider').value);
+ const originId = document.getElementById('originSelect').value;
+ let origin = centers[0];
+ if(originId) {
+ const found = centers.find(c => c.id === originId);
+ if(found) origin = found;
+ }
+
+ let csv = "Type,Name,Original_Lat,Original_Lon,X_Local,Y_Local,Rotated_X,Rotated_Y\n";
+ centers.forEach(c => {
+ const m = latLonToMeters(c.lat, c.lon, origin.lat, origin.lon);
+ const r = rotatePoint(m.x, m.y, rot);
+ csv += `"Center","${c.name}",${c.lat},${c.lon},${m.x.toFixed(3)},${m.y.toFixed(3)},${r.x.toFixed(3)},${r.y.toFixed(3)}\n`;
+ });
+ const blob = new Blob(["﻿" + csv], { type: 'text/csv;charset=utf-8;' });
+ const link = document.createElement("a");
+ link.href = URL.createObjectURL(blob);
+ link.download = `cartesian_centers_rot${rot}_${new Date().toISOString().slice(0,10)}.csv`;
+ link.click();
+ }
+
+ window.downloadPanoramasXYData = function() {
+ if (panoramas.length === 0) { showToast("Немає панорам"); return; }
+ const rot = parseInt(document.getElementById('rotationSlider').value);
+ const originId = document.getElementById('originSelect').value;
+ let origin = centers[0];
+ if(originId) {
+ const found = centers.find(c => c.id === originId);
+ if(found) origin = found;
+ }
+
+ let csv = "Type,Name,Original_Lat,Original_Lon,X_Local,Y_Local,Rotated_X,Rotated_Y\n";
+ panoramas.forEach(p => {
+ const m = latLonToMeters(p.lat, p.lon, origin.lat, origin.lon);
+ const r = rotatePoint(m.x, m.y, rot);
+ csv += `"Panorama","${p.name}",${p.lat},${p.lon},${m.x.toFixed(3)},${m.y.toFixed(3)},${r.x.toFixed(3)},${r.y.toFixed(3)}\n`;
+ });
+ const blob = new Blob(["﻿" + csv], { type: 'text/csv;charset=utf-8;' });
+ const link = document.createElement("a");
+ link.href = URL.createObjectURL(blob);
+ link.download = `cartesian_panoramas_rot${rot}_${new Date().toISOString().slice(0,10)}.csv`;
+ link.click();
+ }
+
+ // --- Sylvo Logic ---
+ window.updateSylvoUI = function() {
+ const container = document.getElementById('speciesMappingList');
+ container.innerHTML = '';
+
+ const unique = new Set();
+ trees.forEach(t => unique.add(t.species.trim()));
+
+ if (unique.size === 0) {
+ container.innerHTML = '<div class="text-xs text-slate-400 italic">Дерева відсутні</div>';
+ return;
+ }
+
+ unique.forEach(sp => {
+ const existingId = speciesIdMap[sp] || '';
+ const row = document.createElement('div');
+ row.className = "flex items-center justify-between bg-white p-2 rounded border border-indigo-100 shadow-sm";
+ row.innerHTML = `
+ <label class="text-xs font-bold text-slate-700">${sp}</label>
+ <input type="number"
+ class="w-20 p-1 text-xs border border-indigo-200 rounded focus:ring-1 focus:ring-indigo-500 outline-none text-center font-mono"
+ placeholder="ID"
+ value="${existingId}"
+ onchange="updateSpeciesId('${sp}', this.value)"
+ >
+ `;
+ container.appendChild(row);
+ });
+ }
+
+ window.updateSpeciesId = function(speciesName, idVal) {
+ speciesIdMap[speciesName] = idVal;
+ saveToStorage();
+ }
+
+ // Search in Sylvo DB
+ window.searchSylvoId = function(query) {
+ const resDiv = document.getElementById('sylvoSearchResults');
+ resDiv.innerHTML = '';
+ if(!query) {
+ resDiv.classList.add('hidden');
+ return;
+ }
+
+ const lower = query.toLowerCase();
+ const filtered = sylvoSpeciesDB.filter(s => s.name.toLowerCase().includes(lower));
+
+ if(filtered.length === 0) {
+ resDiv.classList.add('hidden');
+ return;
+ }
+
+ resDiv.classList.remove('hidden');
+
+ filtered.forEach(s => {
+ const div = document.createElement('div');
+ div.className = "p-2 hover:bg-indigo-50 cursor-pointer flex justify-between items-center border-b border-slate-50 last:border-0";
+ div.innerHTML = `<span class="text-xs text-slate-700">${s.name}</span> <span class="text-xs font-bold text-indigo-700 bg-indigo-100 px-1.5 py-0.5 rounded">${s.id}</span>`;
+ div.onclick = () => {
+ // Copy ID to clipboard
+ navigator.clipboard.writeText(s.id).then(() => showToast(`ID ${s.id} скопійовано!`));
+ resDiv.classList.add('hidden');
+ };
+ resDiv.appendChild(div);
+ });
+ }
+
+ // Auto-fill logic
+ window.autoFillSylvoIds = function() {
+ let matches = 0;
+ trees.forEach(t => {
+ const spName = t.species.trim();
+ // Find exact or close match in DB
+ const found = sylvoSpeciesDB.find(db => db.name.toLowerCase() === spName.toLowerCase() || db.name.toLowerCase().startsWith(spName.toLowerCase()));
+ if(found && !speciesIdMap[spName]) {
+ speciesIdMap[spName] = found.id;
+ matches++;
+ }
+ });
+
+ if(matches > 0) {
+ saveToStorage();
+ updateSylvoUI();
+ showToast(`Автоматично знайдено ${matches} ID`);
+ } else {
+ showToast("Співпадінь не знайдено");
+ }
+ }
+
+ window.downloadSylvoData = function() {
+ if (trees.length === 0) { showToast("Немає даних"); return; }
+
+ // Get transform params from Tab 4
+ const rot = parseInt(document.getElementById('rotationSlider').value);
+ const originId = document.getElementById('originSelect').value;
+ let origin = centers[0];
+ if(originId) {
+ const found = centers.find(c => c.id === originId);
+ if(found) origin = found;
+ }
+
+ // Construct CSV header
+ let csv = "treenumber;treetypeId;coordinateX;coordinateY;treeStatus;diameter;volume;treeSocpos;height;heightCrowbase;ecology;ecologyNote;quality;qualityA;qualityB;qualityC;qualityD;qualityI;qualityUnit;timberQualityValue;vitalityRisk;observation\n";
+
+ trees.forEach(t => {
+ // Calc coords
+ const m = latLonToMeters(t.lat, t.lon, origin.lat, origin.lon);
+ const r = rotatePoint(m.x, m.y, rot);
+
+ // Get Mapping
+ const spName = t.species.trim();
+ const typeId = speciesIdMap[spName] || ""; // Empty if not set
+
+ // Format Data
+ const coordX = r.x.toFixed(2);
+ const coordY = r.y.toFixed(2);
+
+ // Round diameter to nearest 0.5
+ const diam = (Math.round(t.dbh * 2) / 2).toFixed(1);
+
+ // Height to int
+ const h = Math.round(t.height);
+
+ csv += `${t.num};${typeId};${coordX};${coordY};;${diam};;;${h};;;;;;;;;;;;;\n`;
+ });
+
+ const blob = new Blob(["﻿" + csv], { type: 'text/csv;charset=utf-8;' });
+ const link = document.createElement("a");
+ link.href = URL.createObjectURL(blob);
+ link.download = `Sylvotech_Export_${new Date().toISOString().slice(0,10)}.csv`;
+ link.click();
+ }
+
+
+ // --- Rendering Lists & Helpers ---
+ function renderCentersList() {
+ const list = document.getElementById('centersList');
+ list.innerHTML = '';
+
+ // Render Centers
+ centers.forEach(c => {
+ const li = document.createElement('li');
+ li.className = "bg-white p-2 rounded border border-red-100 shadow-sm flex justify-between items-center";
+ li.innerHTML = `
+ <div class="flex items-center gap-2 cursor-pointer" onclick="panToPoint('${c.id}', 'center')">
+ <div class="w-2 h-2 bg-red-500 rounded-full"></div>
+ <div>
+ <div class="text-xs font-bold text-slate-700">${c.name}</div>
+ <div class="text-[10px] text-slate-400 font-mono">Центр | ${c.lat.toFixed(5)}, ${c.lon.toFixed(5)}</div>
+ </div>
+ </div>
+ <button onclick="removePoint('${c.id}', 'center')" class="text-slate-300 hover:text-red-500"><i data-lucide="trash-2" class="w-3 h-3"></i></button>
+ `;
+ list.appendChild(li);
+ });
+
+ // Render Panoramas
+ panoramas.forEach(p => {
+ const li = document.createElement('li');
+ li.className = "bg-white p-2 rounded border border-purple-100 shadow-sm flex justify-between items-center";
+ li.innerHTML = `
+ <div class="flex items-center gap-2 cursor-pointer" onclick="panToPoint('${p.id}', 'panorama')">
+ <i data-lucide="camera" class="w-3 h-3 text-purple-600"></i>
+ <div>
+ <div class="text-xs font-bold text-slate-700">${p.name}</div>
+ <div class="text-[10px] text-slate-400 font-mono">Панорама | ${p.lat.toFixed(5)}, ${p.lon.toFixed(5)}</div>
+ </div>
+ </div>
+ <button onclick="removePoint('${p.id}', 'panorama')" class="text-slate-300 hover:text-red-500"><i data-lucide="trash-2" class="w-3 h-3"></i></button>
+ `;
+ list.appendChild(li);
+ });
+
+ if(window.lucide) lucide.createIcons();
+ }
+
+ function renderTreeTable() {
+ const tbody = document.getElementById('treesTableBody');
+ tbody.innerHTML = '';
+ const sorted = [...trees].sort((a,b) => {
+ if(a.centerId !== b.centerId) return a.centerId.localeCompare(b.centerId);
+ return parseInt(a.num) - parseInt(b.num);
+ });
+ sorted.forEach(t => {
+ const cName = centers.find(c => c.id === t.centerId)?.name || '???';
+ const tr = document.createElement('tr');
+ tr.className = "hover:bg-slate-50 transition group";
+ const coordStr = `${t.lat.toFixed(6)}, ${t.lon.toFixed(6)}`;
+ tr.innerHTML = `
+ <td class="p-2 border-b font-mono text-slate-600">${t.num}</td>
+ <td class="p-2 border-b font-mono text-[10px] text-slate-500">${coordStr}</td>
+ <td class="p-2 border-b font-medium text-slate-800">${t.species || '-'}</td>
+ <td class="p-2 border-b text-slate-600">${t.dbh || '-'}</td>
+ <td class="p-2 border-b text-slate-600">${t.height || '-'}</td>
+ <td class="p-2 border-b text-right">
+ <button onclick="zoomToTree('${t.id}')" class="text-blue-400 hover:text-blue-600 mr-2"><i data-lucide="search" class="w-3 h-3"></i></button>
+ <button onclick="deleteTree('${t.id}')" class="text-slate-300 hover:text-red-500"><i data-lucide="trash" class="w-3 h-3"></i></button>
+ </td>
+ `;
+ tbody.appendChild(tr);
+ });
+ if(window.lucide) lucide.createIcons();
+ }
+
+ window.switchTab = function(tab) {
+ ['centers', 'trees', 'list', 'xy', 'sylvo'].forEach(t => {
+ document.getElementById(`content-${t}`).classList.add('hidden');
+ const btn = document.getElementById(`tab-${t}`);
+ btn.className = "min-w-[70px] flex-1 py-3 text-[10px] sm:text-xs font-bold uppercase tracking-wide text-slate-500 hover:text-emerald-600";
+ });
+ document.getElementById(`content-${tab}`).classList.remove('hidden');
+ document.getElementById(`tab-${tab}`).className = "min-w-[70px] flex-1 py-3 text-[10px] sm:text-xs font-bold uppercase tracking-wide text-emerald-700 border-b-2 border-emerald-600 bg-white";
+
+ if(tab === 'xy') setTimeout(updateXYPreview, 50);
+ if(tab === 'sylvo') updateSylvoUI();
+ }
+
+ function updateDropdowns() {
+ const opts = centers.map(c => `<option value="${c.id}">${c.name}</option>`).join('');
+ document.getElementById('activeCenterSelect').innerHTML = opts || '<option>Додайте центр</option>';
+ document.getElementById('refCenterSelect').innerHTML = opts || '<option>Додайте центр</option>';
+
+ const currentOrigin = document.getElementById('originSelect').value;
+ document.getElementById('originSelect').innerHTML = opts || '<option value="">Додайте центр</option>';
+ if(currentOrigin && centers.find(c => c.id === currentOrigin)) {
+ document.getElementById('originSelect').value = currentOrigin;
+ }
+ }
+
+ function calculateDestination(lat1, lon1, az, dist) {
+ const radLat = lat1 * Math.PI / 180;
+ const radLon = lon1 * Math.PI / 180;
+ const radAz = az * Math.PI / 180;
+ const lat2 = Math.asin(Math.sin(radLat)*Math.cos(dist/R_earth) + Math.cos(radLat)*Math.sin(dist/R_earth)*Math.cos(radAz));
+ const lon2 = radLon + Math.atan2(Math.sin(radAz)*Math.sin(dist/R_earth)*Math.cos(radLat), Math.cos(dist/R_earth)-Math.sin(radLat)*Math.sin(lat2));
+ return { lat: lat2 * 180 / Math.PI, lon: (lon2 * 180 / Math.PI + 540) % 360 - 180 };
+ }
+
+ window.handleFileUpload = function(input) {
+ const file = input.files && input.files[0];
+ if (!file) return;
+ const reader = new FileReader();
+ reader.onload = e => {
+ document.getElementById('csvInput').value = e.target.result;
+ showToast(`Файл "${file.name}" завантажено`);
+ };
+ reader.readAsText(file, 'UTF-8');
+ input.value = '';
+ }
+
+ window.downloadAllData = function() {
+ if (trees.length === 0) { showToast("Немає даних"); return; }
+ let csv = "Center,Lat,Lon,TreeNum,Species,DBH,Height,Azimuth,Dist,TreeLat,TreeLon\n";
+ trees.forEach(t => {
+ const c = centers.find(x => x.id === t.centerId);
+ if(c) csv += `"${c.name}",${c.lat},${c.lon},"${t.num}","${t.species}",${t.dbh},${t.height},${t.az},${t.dist},${t.lat},${t.lon}\n`;
+ });
+ const blob = new Blob(["﻿" + csv], { type: 'text/csv;charset=utf-8;' });
+ const link = document.createElement("a");
+ link.href = URL.createObjectURL(blob);
+ link.download = `marteloscope_${new Date().toISOString().slice(0,10)}.csv`;
+ link.click();
+ }
+
+ window.insertSampleData = function() {
+ document.getElementById('csvInput').value = "1, 45, 12.5, Сосна, 32, 24\n2, 120, 8.3, Дуб, 44, 21\n3, 270, 15.0, Береза, 28, 19\n4, 310, 22.1, Ялина, 50, 28";
+ }
+
+ window.removePoint = function(id, type) {
+ if(!confirm("Видалити точку?")) return;
+
+ if (type === 'center') {
+ centers = centers.filter(c => {
+ if(c.id === id) { map.removeLayer(c.marker); return false; }
+ return true;
+ });
+ // Remove trees linked to this center
+ for (let i = trees.length - 1; i >= 0; i--) {
+ if (trees[i].centerId === id) {
+ if(trees[i].marker) map.removeLayer(trees[i].marker);
+ if(trees[i].line) map.removeLayer(trees[i].line);
+ trees.splice(i, 1);
+ }
+ }
+ } else {
+ panoramas = panoramas.filter(p => {
+ if(p.id === id) { map.removeLayer(p.marker); return false; }
+ return true;
+ });
+ }
+
+ renderCentersList(); updateDropdowns(); renderTreeTable(); updateLegend(); saveToStorage();
+ }
+
+ window.panToPoint = function(id, type) {
+ let p;
+ if (type === 'center') p = centers.find(x => x.id === id);
+ else p = panoramas.find(x => x.id === id);
+
+ if(p) map.setView([p.lat, p.lon], 20);
+ }
+
+ window.zoomToTree = function(id) {
+ const t = trees.find(x => x.id == id);
+ if(t) {
+ map.setView([t.lat, t.lon], 21);
+ t.marker.openPopup();
+ }
+ }
+
+ window.getCurrentLocation = function() {
+ if("geolocation" in navigator) {
+ navigator.geolocation.getCurrentPosition(p => {
+ document.getElementById('centerLat').value = p.coords.latitude.toFixed(6);
+ document.getElementById('centerLon').value = p.coords.longitude.toFixed(6);
+ map.setView([p.coords.latitude, p.coords.longitude], 19);
+ });
+ } else showToast("Геолокація недоступна");
+ }
+
+ window.updateTreeCount = function() {
+ document.getElementById('totalTreesCount').innerText = trees.length;
+ }
+
+ window.showToast = function(msg) {
+ const t = document.getElementById('toast');
+ document.getElementById('toastMsg').innerText = msg;
+ t.classList.remove('translate-y-20');
+ setTimeout(() => t.classList.add('translate-y-20'), 3000);
+ }
+ </script>
+</body>
+</html>

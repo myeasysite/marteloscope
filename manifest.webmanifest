@@ -1,0 +1,25 @@
+{
+  "name": "Marteloscope tree data",
+  "short_name": "Marteloscope",
+  "description": "Прив'язка дерев марелоскопу за азимутом і відстанню з картою та експортом даних",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "any",
+  "background_color": "#064e3b",
+  "theme_color": "#064e3b",
+  "icons": [
+    {
+      "src": "icons/icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    },
+    {
+      "src": "icons/icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "maskable"
+    }
+  ]
+}

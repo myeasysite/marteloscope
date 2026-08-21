@@ -5,15 +5,22 @@
  <meta name="viewport" content="width=device-width, initial-scale=1.0">
  <title>Marteloscope tree data</title>
 
- <!-- Tailwind CSS -->
- <script src="https://cdn.tailwindcss.com"></script>
+ <!-- PWA -->
+ <link rel="manifest" href="manifest.webmanifest">
+ <meta name="theme-color" content="#064e3b">
+ <link rel="icon" href="icons/icon.svg" type="image/svg+xml">
+ <link rel="apple-touch-icon" href="icons/icon.svg">
 
- <!-- Leaflet CSS & JS (Map) -->
- <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin=""/>
- <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
+ <!-- Vendor assets: local copies first (work offline), CDN fallback for a standalone file -->
+ <link rel="stylesheet" href="vendor/leaflet.css">
+ <script src="vendor/leaflet.js"></script>
+ <script>if(!window.L){document.write('<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">');document.write('<scr'+'ipt src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"><\/scr'+'ipt>');}</script>
 
- <!-- Lucide Icons -->
- <script src="https://unpkg.com/lucide@latest"></script>
+ <script src="vendor/tailwind.js"></script>
+ <script>if(!window.tailwind){document.write('<scr'+'ipt src="https://cdn.tailwindcss.com"><\/scr'+'ipt>');}</script>
+
+ <script src="vendor/lucide.js"></script>
+ <script>if(!window.lucide){document.write('<scr'+'ipt src="https://unpkg.com/lucide@latest"><\/scr'+'ipt>');}</script>
 
  <style>
  @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700&display=swap');
@@ -37,6 +44,14 @@
  /* Remove arrows from number input */
  input[type=number]::-webkit-inner-spin-button,
  input[type=number]::-webkit-outer-spin-button { -webkit-appearance: none; margin: 0; }
+
+ /* Layers control icon inlined so no binary asset is required */
+ .leaflet-control-layers-toggle {
+   background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23374151' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'><polygon points='12 2 2 7 12 12 22 7 12 2'/><polyline points='2 17 12 22 22 17'/><polyline points='2 12 12 17 22 12'/></svg>") !important;
+   background-size: 20px 20px;
+   background-position: 50% 50%;
+   background-repeat: no-repeat;
+ }
 
  /* Picking mode cursor */
  .map-picking { cursor: crosshair !important; }
@@ -154,6 +169,29 @@
  </div>
  </div>
 
+ <div class="bg-sky-50 p-4 rounded-lg border border-sky-200 space-y-2">
+ <h3 class="text-sm font-bold text-sky-800 flex items-center gap-2">
+ <i data-lucide="cloud-download" class="w-4 h-4"></i> <span data-i18n="offline_title">Карта офлайн</span>
+ </h3>
+ <p class="text-[10px] text-sky-700" data-i18n="offline_desc">Збережіть плитки карти для видимої області, щоб працювати в лісі без інтернету.</p>
+ <div class="flex items-center gap-2">
+ <label class="text-[10px] font-bold text-sky-800 uppercase shrink-0" data-i18n="offline_depth">Глибина</label>
+ <select id="tileDepth" class="flex-grow p-1 text-xs border border-sky-300 rounded bg-white">
+ <option value="1">+1</option>
+ <option value="2" selected>+2</option>
+ <option value="3">+3</option>
+ <option value="4">+4</option>
+ </select>
+ </div>
+ <button onclick="cacheVisibleTiles()" id="cacheTilesBtn" class="w-full py-2 bg-sky-600 hover:bg-sky-700 text-white text-xs font-bold rounded transition shadow-sm flex items-center justify-center gap-1">
+ <i data-lucide="download-cloud" class="w-3 h-3"></i> <span data-i18n="offline_save">Зберегти видиму область</span>
+ </button>
+ <div class="flex justify-between items-center text-[10px] text-sky-700">
+ <span id="tileStats">—</span>
+ <button onclick="clearTileCache()" class="underline hover:text-red-600" data-i18n="offline_clear">Очистити кеш</button>
+ </div>
+ </div>
+
  <div class="flex-grow">
  <h3 class="text-[10px] font-bold text-slate-400 uppercase mb-2 tracking-wider" data-i18n="points_list">Список точок</h3>
  <ul id="centersList" class="space-y-2"></ul>
@@ -210,12 +248,13 @@
  <table class="w-full text-left text-xs">
  <thead class="bg-slate-100 text-slate-500 sticky top-0 z-10 shadow-sm">
  <tr>
- <th class="p-2 font-medium">№</th>
- <th class="p-2 font-medium">Lat / Lon</th>
- <th class="p-2 font-medium" data-i18n="species">Порода</th>
- <th class="p-2 font-medium" data-i18n="th_d">D (см)</th>
- <th class="p-2 font-medium" data-i18n="th_h">H (м)</th>
- <th class="p-2 font-medium text-right" data-i18n="action">Дія</th>
+ <th class="p-1 font-medium">№</th>
+ <th class="p-1 font-medium" data-i18n="species">Порода</th>
+ <th class="p-1 font-medium" data-i18n="th_d">D</th>
+ <th class="p-1 font-medium" data-i18n="th_h">H</th>
+ <th class="p-1 font-medium" data-i18n="th_az">Az</th>
+ <th class="p-1 font-medium" data-i18n="th_dist">Відст.</th>
+ <th class="p-1 font-medium text-right" data-i18n="action">Дія</th>
  </tr>
  </thead>
  <tbody id="treesTableBody" class="divide-y divide-slate-100">
@@ -223,7 +262,8 @@
  </tbody>
  </table>
  </div>
- <div class="p-3 border-t bg-slate-50">
+ <div class="p-3 border-t bg-slate-50 space-y-2">
+ <p class="text-[10px] text-slate-400 italic text-center" data-i18n="edit_hint">Значення в таблиці можна редагувати. Зміна азимута чи відстані одразу пересуває дерево на карті.</p>
  <button onclick="downloadAllData()" class="w-full py-2 bg-blue-600 hover:bg-blue-700 text-white text-sm font-bold rounded shadow-sm flex items-center justify-center gap-2">
  <i data-lucide="download" class="w-4 h-4"></i> <span data-i18n="export_excel">Експорт Excel (CSV)</span>
  </button>
@@ -345,7 +385,13 @@
 
  <!-- Dynamic Legend (Moved to bottom left) -->
  <div id="mapLegend" class="absolute bottom-6 left-6 bg-white/95 backdrop-blur p-3 rounded-lg shadow-lg z-[400] min-w-[140px] max-h-[300px] overflow-y-auto border border-slate-200">
- <h4 class="text-xs font-bold mb-2 text-slate-700 border-b pb-1" data-i18n="legend">Легенда</h4>
+ <h4 class="text-xs font-bold mb-1 text-slate-700 border-b pb-1" data-i18n="legend">Легенда</h4>
+ <select id="colorModeSelect" onchange="setColorMode(this.value)" class="w-full mb-2 text-[10px] border border-slate-200 rounded p-1 bg-white text-slate-600 outline-none focus:ring-1 focus:ring-emerald-500">
+ <option value="species" data-i18n="cm_species">За породою</option>
+ <option value="diameter" data-i18n="cm_diameter">За ступенем товщини</option>
+ <option value="height" data-i18n="cm_height">За висотою</option>
+ <option value="center" data-i18n="cm_center">За центром</option>
+ </select>
  <div class="flex items-center gap-2 mb-1">
  <div class="w-3 h-3 rounded-full bg-red-500 border border-white shadow-sm"></div>
  <span class="text-xs text-slate-600" data-i18n="legend_center">Центр ділянки</span>
@@ -379,6 +425,68 @@
  };
 
  const R_earth = 6371e3;
+
+ // --- Thematic colouring ---
+ let colorMode = 'species';
+
+ const DIAM_CLASSES = [
+ { max: 12, color: '#fef08a' }, { max: 20, color: '#fde047' }, { max: 28, color: '#f59e0b' },
+ { max: 36, color: '#ea580c' }, { max: 44, color: '#dc2626' }, { max: 52, color: '#991b1b' },
+ { max: Infinity, color: '#4c0519' }
+ ];
+
+ const HEIGHT_CLASSES = [
+ { max: 10, color: '#bbf7d0' }, { max: 15, color: '#6ee7b7' }, { max: 20, color: '#34d399' },
+ { max: 25, color: '#10b981' }, { max: 30, color: '#047857' }, { max: Infinity, color: '#064e3b' }
+ ];
+
+ const CENTER_PALETTE = ['#2563eb', '#db2777', '#16a34a', '#ea580c', '#7c3aed', '#0891b2', '#ca8a04', '#be123c'];
+
+ function classColor(value, classes) {
+ for (const c of classes) if (value < c.max) return c.color;
+ return classes[classes.length - 1].color;
+ }
+
+ function classLabel(classes, idx, unit) {
+ const lo = idx === 0 ? 0 : classes[idx - 1].max;
+ const hi = classes[idx].max;
+ if (hi === Infinity) return '> ' + lo + ' ' + unit;
+ return lo + '–' + hi + ' ' + unit;
+ }
+
+ function getTreeColor(tr) {
+ if (colorMode === 'diameter') return classColor(tr.dbh || 0, DIAM_CLASSES);
+ if (colorMode === 'height') return classColor(tr.height || 0, HEIGHT_CLASSES);
+ if (colorMode === 'center') {
+ const i = centers.findIndex(c => c.id === tr.centerId);
+ return CENTER_PALETTE[(i < 0 ? 0 : i) % CENTER_PALETTE.length];
+ }
+ return getSpeciesColor(tr.species || '');
+ }
+
+ window.setColorMode = function(mode) {
+ colorMode = mode;
+ lsSet('marteloscope_colormode', mode);
+ refreshTreeStyles();
+ }
+
+ function refreshTreeStyles() {
+ trees.forEach(tr => {
+ const color = getTreeColor(tr);
+ const radius = getMarkerRadius(tr.dbh);
+ if (tr.marker) {
+ tr.marker.setIcon(L.divIcon({
+ className: 'tree-marker',
+ html: `<div style="background-color:${color}; width:${radius*2}px; height:${radius*2}px; border-radius:50%; border:1px solid white; box-shadow: 0 1px 2px rgba(0,0,0,0.3);"></div>`,
+ iconSize: [radius*2, radius*2],
+ iconAnchor: [radius, radius]
+ }));
+ }
+ if (tr.line) tr.line.setStyle({ color });
+ });
+ updateLegend();
+ updateXYPreview();
+ }
 
  // --- i18n ---
  const I18N = {
@@ -440,6 +548,18 @@
  not_project: "Це не файл проекту Marteloscope",
  confirm_replace: "Поточний проект буде замінено завантаженим. Продовжити?\n\nПорада: спершу збережіть поточний проект у файл.",
  read_error: "Помилка читання файлу",
+ cm_species: "За породою", cm_diameter: "За ступенем товщини", cm_height: "За висотою", cm_center: "За центром",
+ th_az: "Az", th_dist: "Відст.",
+ edit_hint: "Значення в таблиці можна редагувати. Зміна азимута чи відстані одразу пересуває дерево на карті.",
+ bad_number: "Введіть коректне число", empty_value: "Значення не може бути порожнім",
+ offline_title: "Карта офлайн",
+ offline_desc: "Збережіть плитки карти для видимої області, щоб працювати в лісі без інтернету.",
+ offline_depth: "Глибина", offline_save: "Зберегти видиму область", offline_clear: "Очистити кеш",
+ offline_unsupported: "Офлайн-кеш недоступний (потрібен https)",
+ tiles_stored: "У кеші: {n} плиток", tiles_saving: "Завантаження {n} плиток...",
+ tiles_saved: "Збережено {n} плиток, помилок: {f}", tiles_cleared: "Кеш карти очищено",
+ tiles_too_many: "Забагато плиток ({n}). Зменште масштаб або глибину.",
+ confirm_clear_tiles: "Видалити всі збережені плитки карти?",
  unit_cm: "см", unit_m: "м", dist_short: "Відст."
  },
  en: {
@@ -500,6 +620,18 @@
  not_project: "This is not a Marteloscope project file",
  confirm_replace: "The current project will be replaced by the loaded one. Continue?\n\nTip: save the current project to a file first.",
  read_error: "File reading error",
+ cm_species: "By species", cm_diameter: "By diameter class", cm_height: "By height", cm_center: "By centre",
+ th_az: "Az", th_dist: "Dist",
+ edit_hint: "Table values are editable. Changing azimuth or distance moves the tree on the map instantly.",
+ bad_number: "Enter a valid number", empty_value: "The value cannot be empty",
+ offline_title: "Offline map",
+ offline_desc: "Save map tiles for the visible area so you can work in the forest with no signal.",
+ offline_depth: "Depth", offline_save: "Save visible area", offline_clear: "Clear cache",
+ offline_unsupported: "Offline cache unavailable (https required)",
+ tiles_stored: "Cached: {n} tiles", tiles_saving: "Downloading {n} tiles...",
+ tiles_saved: "{n} tiles saved, {f} failed", tiles_cleared: "Map cache cleared",
+ tiles_too_many: "Too many tiles ({n}). Zoom in or reduce the depth.",
+ confirm_clear_tiles: "Delete all saved map tiles?",
  unit_cm: "cm", unit_m: "m", dist_short: "Dist"
  }
  };
@@ -541,6 +673,9 @@
  centers.forEach(c => { if (c.marker) c.marker.setPopupContent(centerPopupHtml(c)); });
  panoramas.forEach(p => { if (p.marker) p.marker.setPopupContent(panoPopupHtml(p)); });
  trees.forEach(tr => { if (tr.marker) tr.marker.setPopupContent(treePopupHtml(tr)); });
+
+ const cm = document.getElementById('colorModeSelect');
+ if (cm) cm.value = colorMode;
 
  renderCentersList();
  updateDropdowns();
@@ -596,7 +731,10 @@
  initMap();
  const savedLang = lsGet('marteloscope_lang');
  if (savedLang && I18N[savedLang]) lang = savedLang;
+ const savedMode = lsGet('marteloscope_colormode');
+ if (savedMode) colorMode = savedMode;
  loadFromStorage();
+ initOffline();
 
  applyLang();
 
@@ -631,6 +769,8 @@
  };
 
  L.control.layers(baseMaps, null, { position: 'topright' }).addTo(map);
+
+ map.on('baselayerchange', e => { activeTileLayer = (e.layer === satelliteLayer) ? 'sat' : 'osm'; });
 
  // Live coordinate readout
  const coordBox = L.control({position: 'bottomright'});
@@ -734,6 +874,88 @@
  const x = Math.cos(p1)*Math.sin(p2) - Math.sin(p1)*Math.cos(p2)*Math.cos(dl);
  const az = (Math.atan2(y, x) * 180 / Math.PI + 360) % 360;
  return { az, dist };
+ }
+
+ // --- Offline: service worker, tile cache ---
+ let activeTileLayer = 'osm';
+ let swReady = false;
+
+ function initOffline() {
+ if (!('serviceWorker' in navigator) || !location.protocol.startsWith('http')) {
+ document.getElementById('tileStats').innerText = t('offline_unsupported');
+ return;
+ }
+ navigator.serviceWorker.register('sw.js')
+ .then(() => navigator.serviceWorker.ready)
+ .then(() => { swReady = true; updateTileStats(); })
+ .catch(() => { document.getElementById('tileStats').innerText = t('offline_unsupported'); });
+
+ navigator.serviceWorker.addEventListener('message', e => {
+ const d = e.data || {};
+ const btn = document.getElementById('cacheTilesBtn');
+ if (d.type === 'TILE_PROGRESS') {
+ btn.innerHTML = `<i data-lucide="loader" class="w-3 h-3"></i> ${d.done}/${d.total}`;
+ if (window.lucide) lucide.createIcons();
+ }
+ if (d.type === 'TILE_DONE') {
+ btn.innerHTML = `<i data-lucide="download-cloud" class="w-3 h-3"></i> ${t('offline_save')}`;
+ if (window.lucide) lucide.createIcons();
+ showToast(t('tiles_saved', {n: d.done, f: d.failed}));
+ updateTileStats();
+ }
+ if (d.type === 'TILES_CLEARED') { showToast(t('tiles_cleared')); updateTileStats(); }
+ if (d.type === 'TILE_STATS') {
+ document.getElementById('tileStats').innerText = t('tiles_stored', {n: d.count});
+ }
+ });
+ }
+
+ function swPost(msg) {
+ if (navigator.serviceWorker && navigator.serviceWorker.controller) navigator.serviceWorker.controller.postMessage(msg);
+ }
+
+ function updateTileStats() { swPost({ type: 'TILE_STATS' }); }
+
+ function lonToTileX(lon, z) { return Math.floor((lon + 180) / 360 * Math.pow(2, z)); }
+ function latToTileY(lat, z) {
+ const r = lat * Math.PI / 180;
+ return Math.floor((1 - Math.log(Math.tan(r) + 1 / Math.cos(r)) / Math.PI) / 2 * Math.pow(2, z));
+ }
+
+ function tileUrl(z, x, y) {
+ return activeTileLayer === 'sat'
+ ? `https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/${z}/${y}/${x}`
+ : `https://a.tile.openstreetmap.org/${z}/${x}/${y}.png`;
+ }
+
+ window.cacheVisibleTiles = function() {
+ if (!swReady) { showToast(t('offline_unsupported')); return; }
+
+ const depth = parseInt(document.getElementById('tileDepth').value) || 2;
+ const b = map.getBounds();
+ const z0 = map.getZoom();
+ const maxZ = activeTileLayer === 'sat' ? 19 : 19;
+ const urls = [];
+
+ for (let z = z0; z <= Math.min(z0 + depth, maxZ); z++) {
+ const x1 = lonToTileX(b.getWest(), z), x2 = lonToTileX(b.getEast(), z);
+ const y1 = latToTileY(b.getNorth(), z), y2 = latToTileY(b.getSouth(), z);
+ for (let x = Math.min(x1,x2); x <= Math.max(x1,x2); x++)
+ for (let y = Math.min(y1,y2); y <= Math.max(y1,y2); y++)
+ urls.push(tileUrl(z, x, y));
+ }
+
+ if (urls.length > 4000) { showToast(t('tiles_too_many', {n: urls.length})); return; }
+ if (urls.length === 0) { showToast(t('no_data')); return; }
+
+ showToast(t('tiles_saving', {n: urls.length}));
+ swPost({ type: 'CACHE_TILES', urls });
+ }
+
+ window.clearTileCache = function() {
+ if (!swReady) { showToast(t('offline_unsupported')); return; }
+ if (!confirm(t('confirm_clear_tiles'))) return;
+ swPost({ type: 'CLEAR_TILES' });
  }
 
  // --- Storage Logic ---
@@ -942,30 +1164,53 @@
  return Math.max(3, Math.min(15, dbh / 8));
  }
 
+ function legendRow(color, label) {
+ return `<div class="flex items-center gap-2 mb-1">
+ <div class="w-2.5 h-2.5 rounded-full shadow-sm shrink-0" style="background-color: ${color}"></div>
+ <span class="text-xs text-slate-600">${label}</span>
+ </div>`;
+ }
+
  function updateLegend() {
  const legendDiv = document.getElementById('speciesLegend');
  legendDiv.innerHTML = '';
 
- uniqueSpecies.clear();
- trees.forEach(t => { if(t.species) uniqueSpecies.add(t.species.trim()); });
-
- if (uniqueSpecies.size === 0) {
+ if (trees.length === 0) {
  legendDiv.innerHTML = `<div class="text-[10px] text-slate-400 italic">${t('no_trees')}</div>`;
  return;
  }
 
- uniqueSpecies.forEach(sp => {
- const color = getSpeciesColor(sp);
- const display = sp.charAt(0).toUpperCase() + sp.slice(1);
+ let html = '';
 
- const item = document.createElement('div');
- item.className = 'flex items-center gap-2 mb-1';
- item.innerHTML = `
- <div class="w-2.5 h-2.5 rounded-full shadow-sm" style="background-color: ${color}"></div>
- <span class="text-xs text-slate-600">${display}</span>
- `;
- legendDiv.appendChild(item);
+ if (colorMode === 'species') {
+ uniqueSpecies.clear();
+ trees.forEach(tr => { if (tr.species) uniqueSpecies.add(tr.species.trim()); });
+ uniqueSpecies.forEach(sp => {
+ html += legendRow(getSpeciesColor(sp), sp.charAt(0).toUpperCase() + sp.slice(1));
  });
+
+ } else if (colorMode === 'diameter' || colorMode === 'height') {
+ const classes = colorMode === 'diameter' ? DIAM_CLASSES : HEIGHT_CLASSES;
+ const unit = colorMode === 'diameter' ? t('unit_cm') : t('unit_m');
+ const counts = classes.map(() => 0);
+ trees.forEach(tr => {
+ const v = (colorMode === 'diameter' ? tr.dbh : tr.height) || 0;
+ for (let i = 0; i < classes.length; i++) if (v < classes[i].max) { counts[i]++; break; }
+ });
+ classes.forEach((c, i) => {
+ if (counts[i] === 0) return;
+ html += legendRow(c.color, `${classLabel(classes, i, unit)} · ${counts[i]}`);
+ });
+
+ } else if (colorMode === 'center') {
+ centers.forEach((c, i) => {
+ const n = trees.filter(tr => tr.centerId === c.id).length;
+ if (n === 0) return;
+ html += legendRow(CENTER_PALETTE[i % CENTER_PALETTE.length], `${c.name} · ${n}`);
+ });
+ }
+
+ legendDiv.innerHTML = html || `<div class="text-[10px] text-slate-400 italic">${t('no_trees')}</div>`;
  }
 
  // --- Center & Panorama Management ---
@@ -1173,7 +1418,7 @@
  }
 
  function createTreeMarker(tr) {
- const color = getSpeciesColor(tr.species);
+ const color = getTreeColor(tr);
  const radius = getMarkerRadius(tr.dbh);
 
  const icon = L.divIcon({
@@ -1334,7 +1579,7 @@
  trees.forEach(t => {
  const m = latLonToMeters(t.lat, t.lon, origin.lat, origin.lon);
  const r = rotatePoint(m.x, m.y, rot);
- pts.push({ x: r.x, y: r.y, color: getSpeciesColor(t.species), type: 'tree' });
+ pts.push({ x: r.x, y: r.y, color: getTreeColor(t), type: 'tree' });
  });
 
  ctx.clearRect(0, 0, w, h);
@@ -1656,32 +1901,75 @@
  if(window.lucide) lucide.createIcons();
  }
 
+ const CELL = "w-full bg-transparent px-1 py-0.5 rounded border border-transparent hover:border-slate-200 focus:border-emerald-500 focus:bg-white outline-none";
+
  function renderTreeTable() {
  const tbody = document.getElementById('treesTableBody');
  tbody.innerHTML = '';
  const sorted = [...trees].sort((a,b) => {
- if(a.centerId !== b.centerId) return a.centerId.localeCompare(b.centerId);
- return parseInt(a.num) - parseInt(b.num);
+ if(a.centerId !== b.centerId) return String(a.centerId).localeCompare(String(b.centerId));
+ return parseFloat(a.num) - parseFloat(b.num);
  });
- sorted.forEach(t => {
- const cName = centers.find(c => c.id === t.centerId)?.name || '???';
- const tr = document.createElement('tr');
- tr.className = "hover:bg-slate-50 transition group";
- const coordStr = `${t.lat.toFixed(6)}, ${t.lon.toFixed(6)}`;
- tr.innerHTML = `
- <td class="p-2 border-b font-mono text-slate-600">${t.num}</td>
- <td class="p-2 border-b font-mono text-[10px] text-slate-500">${coordStr}</td>
- <td class="p-2 border-b font-medium text-slate-800">${t.species || '-'}</td>
- <td class="p-2 border-b text-slate-600">${t.dbh || '-'}</td>
- <td class="p-2 border-b text-slate-600">${t.height || '-'}</td>
- <td class="p-2 border-b text-right">
- <button onclick="zoomToTree('${t.id}')" class="text-blue-400 hover:text-blue-600 mr-2"><i data-lucide="search" class="w-3 h-3"></i></button>
- <button onclick="deleteTree('${t.id}')" class="text-slate-300 hover:text-red-500"><i data-lucide="trash" class="w-3 h-3"></i></button>
+
+ sorted.forEach(item => {
+ const cName = centers.find(c => c.id === item.centerId)?.name || '???';
+ const row = document.createElement('tr');
+ row.className = "hover:bg-slate-50 transition";
+ row.title = `${cName} · ${item.lat.toFixed(6)}, ${item.lon.toFixed(6)}`;
+ row.innerHTML = `
+ <td class="p-1 border-b"><input class="${CELL} font-mono text-slate-700 w-9" value="${item.num}" onchange="updateTreeField('${item.id}','num',this.value)"></td>
+ <td class="p-1 border-b"><input class="${CELL} text-slate-800 font-medium" value="${(item.species || '').replace(/"/g,'&quot;')}" onchange="updateTreeField('${item.id}','species',this.value)"></td>
+ <td class="p-1 border-b"><input type="number" step="0.1" class="${CELL} text-slate-600 w-11" value="${item.dbh}" onchange="updateTreeField('${item.id}','dbh',this.value)"></td>
+ <td class="p-1 border-b"><input type="number" step="0.1" class="${CELL} text-slate-600 w-11" value="${item.height}" onchange="updateTreeField('${item.id}','height',this.value)"></td>
+ <td class="p-1 border-b"><input type="number" step="0.1" class="${CELL} text-slate-600 w-12" value="${item.az}" onchange="updateTreeField('${item.id}','az',this.value)"></td>
+ <td class="p-1 border-b"><input type="number" step="0.1" class="${CELL} text-slate-600 w-12" value="${item.dist}" onchange="updateTreeField('${item.id}','dist',this.value)"></td>
+ <td class="p-1 border-b text-right whitespace-nowrap">
+ <button onclick="zoomToTree('${item.id}')" class="text-blue-400 hover:text-blue-600 mr-1"><i data-lucide="search" class="w-3 h-3"></i></button>
+ <button onclick="deleteTree('${item.id}')" class="text-slate-300 hover:text-red-500"><i data-lucide="trash" class="w-3 h-3"></i></button>
  </td>
  `;
- tbody.appendChild(tr);
+ tbody.appendChild(row);
  });
  if(window.lucide) lucide.createIcons();
+ }
+
+ // Inline editing: keeps map, legend and preview in sync without re-rendering the table
+ window.updateTreeField = function(id, field, raw) {
+ const tr = trees.find(x => String(x.id) === String(id));
+ if (!tr) return;
+
+ if (field === 'num' || field === 'species') {
+ const v = String(raw).trim();
+ if (!v) { showToast(t('empty_value')); renderTreeTable(); return; }
+ tr[field] = v;
+ } else {
+ const v = parseFloat(String(raw).replace(',', '.'));
+ if (isNaN(v)) { showToast(t('bad_number')); renderTreeTable(); return; }
+ if (field === 'az') {
+ tr.az = ((v % 360) + 360) % 360;
+ } else if (field === 'dist' || field === 'dbh' || field === 'height') {
+ if (v < 0) { showToast(t('bad_number')); renderTreeTable(); return; }
+ tr[field] = v;
+ }
+ }
+
+ // Geometry depends on azimuth and distance
+ if (field === 'az' || field === 'dist') {
+ const c = centers.find(x => x.id === tr.centerId);
+ if (c) {
+ const pos = calculateDestination(c.lat, c.lon, tr.az, tr.dist);
+ tr.lat = pos.lat; tr.lon = pos.lon;
+ if (tr.marker) tr.marker.setLatLng([tr.lat, tr.lon]);
+ if (tr.line) tr.line.setLatLngs([[c.lat, c.lon], [tr.lat, tr.lon]]);
+ }
+ }
+
+ if (field === 'species' || field === 'dbh' || field === 'height') refreshTreeStyles();
+ else updateXYPreview();
+
+ if (tr.marker) tr.marker.setPopupContent(treePopupHtml(tr));
+ if (field === 'species') updateSylvoUI();
+ saveToStorage();
  }
 
  window.switchTab = function(tab) {

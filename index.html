@@ -51,19 +51,23 @@
  <i data-lucide="tree-deciduous" class="w-6 h-6 text-emerald-400"></i>
  <div>
  <h1 class="text-lg font-bold leading-tight">Marteloscope tree data</h1>
- <p class="text-[10px] text-emerald-300 opacity-80">Forestry Mapping Tool</p>
+ <p class="text-[10px] text-emerald-300 opacity-80" data-i18n="subtitle">Інструмент картування лісу</p>
  </div>
  </div>
  <div class="flex items-center gap-2">
  <input type="file" id="projectFileInput" accept=".json,.mtls" class="hidden" onchange="loadProjectFile(this)">
- <button onclick="saveProjectFile()" class="text-xs bg-emerald-800 hover:bg-emerald-700 px-2 py-1 rounded transition flex items-center gap-1" title="Зберегти проект у файл на комп'ютері">
- <i data-lucide="save" class="w-3 h-3"></i> Зберегти у файл
+ <div class="flex items-center bg-emerald-950/60 rounded overflow-hidden text-[10px] font-bold mr-1 border border-emerald-700">
+ <button onclick="setLang('uk')" id="lang-uk" class="px-2 py-1 transition">UA</button>
+ <button onclick="setLang('en')" id="lang-en" class="px-2 py-1 transition">EN</button>
+ </div>
+ <button onclick="saveProjectFile()" class="text-xs bg-emerald-800 hover:bg-emerald-700 px-2 py-1 rounded transition flex items-center gap-1" data-i18n-title="save_file_title">
+ <i data-lucide="save" class="w-3 h-3"></i> <span data-i18n="save_file">Зберегти у файл</span>
  </button>
- <button onclick="document.getElementById('projectFileInput').click()" class="text-xs bg-emerald-800 hover:bg-emerald-700 px-2 py-1 rounded transition flex items-center gap-1" title="Відкрити раніше збережений проект">
- <i data-lucide="folder-open" class="w-3 h-3"></i> Відкрити проект
+ <button onclick="document.getElementById('projectFileInput').click()" class="text-xs bg-emerald-800 hover:bg-emerald-700 px-2 py-1 rounded transition flex items-center gap-1" data-i18n-title="open_file_title">
+ <i data-lucide="folder-open" class="w-3 h-3"></i> <span data-i18n="open_file">Відкрити проект</span>
  </button>
- <button onclick="clearStorage()" class="text-xs bg-emerald-800 hover:bg-red-700 px-2 py-1 rounded transition" title="Скинути всі дані">
- Скинути проект
+ <button onclick="clearStorage()" class="text-xs bg-emerald-800 hover:bg-red-700 px-2 py-1 rounded transition" data-i18n-title="reset_title">
+ <span data-i18n="reset_project">Скинути проект</span>
  </button>
  </div>
  </header>
@@ -76,92 +80,82 @@
 
  <!-- Tabs Navigation -->
  <div class="flex border-b border-slate-200 shrink-0 bg-slate-50 overflow-x-auto">
- <button onclick="switchTab('centers')" id="tab-centers" class="min-w-[70px] flex-1 py-3 text-[10px] sm:text-xs font-bold uppercase tracking-wide text-emerald-700 border-b-2 border-emerald-600 bg-white">
- 1. Точки
- </button>
- <button onclick="switchTab('trees')" id="tab-trees" class="min-w-[70px] flex-1 py-3 text-[10px] sm:text-xs font-bold uppercase tracking-wide text-slate-500 hover:text-emerald-600">
- 2. Ввід
- </button>
- <button onclick="switchTab('list')" id="tab-list" class="min-w-[70px] flex-1 py-3 text-[10px] sm:text-xs font-bold uppercase tracking-wide text-slate-500 hover:text-emerald-600">
- 3. Таблиця
- </button>
- <button onclick="switchTab('xy')" id="tab-xy" class="min-w-[70px] flex-1 py-3 text-[10px] sm:text-xs font-bold uppercase tracking-wide text-slate-500 hover:text-emerald-600">
- 4. X/Y
- </button>
- <button onclick="switchTab('sylvo')" id="tab-sylvo" class="min-w-[70px] flex-1 py-3 text-[10px] sm:text-xs font-bold uppercase tracking-wide text-slate-500 hover:text-emerald-600">
- 5. Sylvo
- </button>
+ <button onclick="switchTab('centers')" id="tab-centers" class="min-w-[70px] flex-1 py-3 text-[10px] sm:text-xs font-bold uppercase tracking-wide text-emerald-700 border-b-2 border-emerald-600 bg-white" data-i18n="tab_points">1. Точки</button>
+ <button onclick="switchTab('trees')" id="tab-trees" class="min-w-[70px] flex-1 py-3 text-[10px] sm:text-xs font-bold uppercase tracking-wide text-slate-500 hover:text-emerald-600" data-i18n="tab_input">2. Ввід</button>
+ <button onclick="switchTab('list')" id="tab-list" class="min-w-[70px] flex-1 py-3 text-[10px] sm:text-xs font-bold uppercase tracking-wide text-slate-500 hover:text-emerald-600" data-i18n="tab_table">3. Таблиця</button>
+ <button onclick="switchTab('xy')" id="tab-xy" class="min-w-[70px] flex-1 py-3 text-[10px] sm:text-xs font-bold uppercase tracking-wide text-slate-500 hover:text-emerald-600" data-i18n="tab_xy">4. X/Y</button>
+ <button onclick="switchTab('sylvo')" id="tab-sylvo" class="min-w-[70px] flex-1 py-3 text-[10px] sm:text-xs font-bold uppercase tracking-wide text-slate-500 hover:text-emerald-600" data-i18n="tab_sylvo">5. Sylvo</button>
  </div>
 
  <!-- Tab Content: Centers & Panoramas -->
  <div id="content-centers" class="flex-grow flex flex-col overflow-y-auto p-4 space-y-4">
  <div class="bg-slate-50 p-4 rounded-lg border border-slate-200 shadow-sm">
  <h3 class="text-sm font-bold text-slate-700 mb-3 flex items-center gap-2">
- <i data-lucide="map-pin" class="w-4 h-4 text-emerald-600"></i> Додати точку
+ <i data-lucide="map-pin" class="w-4 h-4 text-emerald-600"></i> <span data-i18n="add_point">Додати точку</span>
  </h3>
 
  <!-- Point Type Toggle -->
  <div class="flex mb-3 bg-slate-200 p-1 rounded text-[10px]">
  <button onclick="setPointType('center')" id="type-center" class="flex-1 py-1.5 rounded shadow-sm bg-white font-bold text-red-700 transition flex items-center justify-center gap-1">
- <span class="w-2 h-2 bg-red-500 rounded-full inline-block"></span> Центр
+ <span class="w-2 h-2 bg-red-500 rounded-full inline-block"></span> <span data-i18n="center">Центр</span>
  </button>
  <button onclick="setPointType('panorama')" id="type-panorama" class="flex-1 py-1.5 rounded text-purple-700 font-medium hover:text-purple-900 transition flex items-center justify-center gap-1">
- <i data-lucide="camera" class="w-3 h-3"></i> Панорама
+ <i data-lucide="camera" class="w-3 h-3"></i> <span data-i18n="panorama">Панорама</span>
  </button>
  </div>
 
  <!-- Input Mode Toggle -->
  <div class="flex mb-3 border-t border-slate-200 pt-3">
  <div class="flex bg-slate-100 p-0.5 rounded text-[10px] w-full">
- <button onclick="setCenterMode('absolute')" id="mode-absolute" class="flex-1 py-1 rounded shadow-sm bg-white font-bold text-slate-800 transition">Координати / GPS / Карта</button>
- <button onclick="setCenterMode('relative')" id="mode-relative" class="flex-1 py-1 rounded text-slate-500 font-medium hover:text-slate-800 transition">Від іншого центру</button>
+ <button onclick="setCenterMode('absolute')" id="mode-absolute" class="flex-1 py-1 rounded shadow-sm bg-white font-bold text-slate-800 transition" data-i18n="mode_absolute">Координати / GPS / Карта</button>
+ <button onclick="setCenterMode('relative')" id="mode-relative" class="flex-1 py-1 rounded text-slate-500 font-medium hover:text-slate-800 transition" data-i18n="mode_relative">Від іншого центру</button>
  </div>
  </div>
 
  <div class="space-y-3">
- <input type="text" id="centerName" placeholder="Назва (напр. Сектор А)" class="w-full p-2 text-sm border rounded focus:ring-2 focus:ring-emerald-500 outline-none">
+ <input type="text" id="centerName" data-i18n-ph="ph_name_center" placeholder="Назва (напр. Сектор А)" class="w-full p-2 text-sm border rounded focus:ring-2 focus:ring-emerald-500 outline-none">
 
  <!-- Absolute Mode Inputs -->
  <div id="inputs-absolute" class="space-y-2">
  <div class="grid grid-cols-2 gap-2">
- <input type="number" id="centerLat" step="any" placeholder="Широта (Lat)" class="p-2 text-sm border rounded">
- <input type="number" id="centerLon" step="any" placeholder="Довгота (Lon)" class="p-2 text-sm border rounded">
+ <input type="number" id="centerLat" step="any" data-i18n-ph="ph_lat" placeholder="Широта (Lat)" class="p-2 text-sm border rounded">
+ <input type="number" id="centerLon" step="any" data-i18n-ph="ph_lon" placeholder="Довгота (Lon)" class="p-2 text-sm border rounded">
  </div>
  <button onclick="togglePickOnMap()" id="pickMapBtn" class="w-full py-2 bg-slate-200 hover:bg-slate-300 text-slate-700 text-xs rounded transition flex items-center justify-center gap-1">
- <i data-lucide="mouse-pointer-click" class="w-3 h-3"></i> Вказати точку на карті
+ <i data-lucide="mouse-pointer-click" class="w-3 h-3"></i> <span data-i18n="pick_map">Вказати точку на карті</span>
  </button>
  <button onclick="getCurrentLocation()" class="w-full py-2 bg-slate-200 hover:bg-slate-300 text-slate-700 text-xs rounded transition flex items-center justify-center gap-1">
- <i data-lucide="crosshair" class="w-3 h-3"></i> Взяти GPS з пристрою
+ <i data-lucide="crosshair" class="w-3 h-3"></i> <span data-i18n="use_gps">Взяти GPS з пристрою</span>
  </button>
  </div>
 
  <!-- Relative Mode Inputs -->
  <div id="inputs-relative" class="hidden space-y-2">
  <div>
- <label class="block text-[10px] font-bold text-slate-400 uppercase mb-1">Базова точка (Центр)</label>
+ <label class="block text-[10px] font-bold text-slate-400 uppercase mb-1" data-i18n="ref_point">Базова точка (Центр)</label>
  <select id="refCenterSelect" class="w-full p-2 border border-slate-300 rounded text-sm bg-white"></select>
  </div>
  <div class="grid grid-cols-2 gap-2">
  <div class="relative">
- <label class="block text-[10px] font-bold text-slate-400 uppercase mb-1">Азимут (°)</label>
+ <label class="block text-[10px] font-bold text-slate-400 uppercase mb-1" data-i18n="azimuth">Азимут (°)</label>
  <input type="number" id="centerAz" step="any" placeholder="0-360" class="w-full p-2 text-sm border rounded">
  </div>
  <div>
- <label class="block text-[10px] font-bold text-slate-400 uppercase mb-1">Відстань (м)</label>
- <input type="number" id="centerDist" step="any" placeholder="Метри" class="w-full p-2 text-sm border rounded">
+ <label class="block text-[10px] font-bold text-slate-400 uppercase mb-1" data-i18n="distance">Відстань (м)</label>
+ <input type="number" id="centerDist" step="any" data-i18n-ph="ph_meters" placeholder="Метри" class="w-full p-2 text-sm border rounded">
  </div>
  </div>
- <p class="text-[10px] text-slate-400 italic text-center">Для збігу точок введіть відстань 0</p>
+ <p class="text-[10px] text-slate-400 italic text-center" data-i18n="hint_zero">Для збігу точок введіть відстань 0</p>
  </div>
 
  <button onclick="addPoint()" id="addPointBtn" class="w-full py-2 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold rounded transition shadow-sm flex items-center justify-center gap-2 mt-2">
- <i data-lucide="plus" class="w-4 h-4"></i> Додати точку
+ <i data-lucide="plus" class="w-4 h-4"></i> <span data-i18n="add_point">Додати точку</span>
  </button>
  </div>
  </div>
 
  <div class="flex-grow">
- <h3 class="text-[10px] font-bold text-slate-400 uppercase mb-2 tracking-wider">Список точок</h3>
+ <h3 class="text-[10px] font-bold text-slate-400 uppercase mb-2 tracking-wider" data-i18n="points_list">Список точок</h3>
  <ul id="centersList" class="space-y-2"></ul>
  </div>
  </div>
@@ -170,21 +164,21 @@
  <div id="content-trees" class="hidden flex-grow flex flex-col overflow-y-auto p-4 space-y-4">
 
  <div class="bg-blue-50 p-4 rounded-lg border border-blue-100">
- <label class="block text-[10px] font-bold text-blue-800 uppercase mb-1">Робочий центр</label>
+ <label class="block text-[10px] font-bold text-blue-800 uppercase mb-1" data-i18n="active_center">Робочий центр</label>
  <select id="activeCenterSelect" class="w-full p-2 border border-blue-300 rounded text-sm bg-white font-semibold text-blue-900">
- <option value="">Спочатку додайте центри...</option>
+ <option value="" data-i18n="add_centers_first">Спочатку додайте центри...</option>
  </select>
  </div>
 
  <div class="bg-white p-4 rounded-lg border border-slate-200 shadow-sm flex-grow flex flex-col">
  <div class="flex justify-between items-center mb-2">
- <label class="block text-xs font-bold text-slate-700 uppercase">Дані дерев (CSV)</label>
- <button onclick="insertSampleData()" class="text-[10px] text-emerald-600 hover:underline">Вставити приклад</button>
+ <label class="block text-xs font-bold text-slate-700 uppercase" data-i18n="tree_data_csv">Дані дерев (CSV)</label>
+ <button onclick="insertSampleData()" class="text-[10px] text-emerald-600 hover:underline" data-i18n="insert_sample">Вставити приклад</button>
  </div>
 
  <div class="mb-3 flex-grow">
  <div class="bg-slate-100 text-[10px] p-2 rounded mb-2 text-slate-600 border border-slate-200 font-mono">
- Формат: Номер, Азимут, Відстань, Порода, Діаметр (см), Висота (м)
+ <span data-i18n="csv_format">Формат: Номер, Азимут, Відстань, Порода, Діаметр (см), Висота (м)</span>
  </div>
  <textarea id="csvInput" class="w-full h-40 p-2 text-xs font-mono border border-slate-300 rounded focus:ring-2 focus:ring-emerald-500 outline-none resize-none" placeholder="1, 45, 12.5, Сосна, 32, 24&#10;2, 120, 8.3, Дуб, 44, 21&#10;3, 270, 15.0, Береза, 28, 19"></textarea>
  </div>
@@ -192,10 +186,10 @@
  <div class="flex gap-2">
  <input type="file" id="fileUpload" accept=".csv,.txt" class="hidden" onchange="handleFileUpload(this)">
  <button onclick="document.getElementById('fileUpload').click()" class="flex-1 py-2 border border-slate-300 hover:bg-slate-50 text-slate-600 text-xs rounded flex items-center justify-center gap-1 font-medium">
- <i data-lucide="upload" class="w-3 h-3"></i> Імпорт файлу
+ <i data-lucide="upload" class="w-3 h-3"></i> <span data-i18n="import_file">Імпорт файлу</span>
  </button>
  <button onclick="processTrees()" class="flex-1 py-2 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold rounded shadow-sm flex items-center justify-center gap-1">
- <i data-lucide="calculator" class="w-3 h-3"></i> Розрахувати
+ <i data-lucide="calculator" class="w-3 h-3"></i> <span data-i18n="calculate">Розрахувати</span>
  </button>
  </div>
  </div>
@@ -204,11 +198,11 @@
  <!-- Tab Content: Tree List -->
  <div id="content-list" class="hidden flex-grow flex flex-col overflow-hidden">
  <div class="p-3 bg-slate-50 border-b flex justify-between items-center gap-2">
- <h3 class="text-xs font-bold text-slate-700 uppercase">Список дерев</h3>
+ <h3 class="text-xs font-bold text-slate-700 uppercase" data-i18n="tree_list">Список дерев</h3>
  <div class="flex items-center gap-3">
- <div class="text-xs text-emerald-700 font-bold">Всього: <span id="totalTreesCount">0</span></div>
- <button onclick="clearAllTrees()" class="text-[10px] font-bold uppercase tracking-wide border border-red-200 text-red-600 hover:bg-red-600 hover:text-white px-2 py-1 rounded transition flex items-center gap-1" title="Видалити всі дерева (точки залишаться)">
- <i data-lucide="eraser" class="w-3 h-3"></i> Очистити список
+ <div class="text-xs text-emerald-700 font-bold"><span data-i18n="total">Всього:</span> <span id="totalTreesCount">0</span></div>
+ <button onclick="clearAllTrees()" class="text-[10px] font-bold uppercase tracking-wide border border-red-200 text-red-600 hover:bg-red-600 hover:text-white px-2 py-1 rounded transition flex items-center gap-1" data-i18n-title="clear_list_title">
+ <i data-lucide="eraser" class="w-3 h-3"></i> <span data-i18n="clear_list">Очистити список</span>
  </button>
  </div>
  </div>
@@ -218,10 +212,10 @@
  <tr>
  <th class="p-2 font-medium">№</th>
  <th class="p-2 font-medium">Lat / Lon</th>
- <th class="p-2 font-medium">Порода</th>
- <th class="p-2 font-medium">D (см)</th>
- <th class="p-2 font-medium">H (м)</th>
- <th class="p-2 font-medium text-right">Дія</th>
+ <th class="p-2 font-medium" data-i18n="species">Порода</th>
+ <th class="p-2 font-medium" data-i18n="th_d">D (см)</th>
+ <th class="p-2 font-medium" data-i18n="th_h">H (м)</th>
+ <th class="p-2 font-medium text-right" data-i18n="action">Дія</th>
  </tr>
  </thead>
  <tbody id="treesTableBody" class="divide-y divide-slate-100">
@@ -231,7 +225,7 @@
  </div>
  <div class="p-3 border-t bg-slate-50">
  <button onclick="downloadAllData()" class="w-full py-2 bg-blue-600 hover:bg-blue-700 text-white text-sm font-bold rounded shadow-sm flex items-center justify-center gap-2">
- <i data-lucide="download" class="w-4 h-4"></i> Експорт Excel (CSV)
+ <i data-lucide="download" class="w-4 h-4"></i> <span data-i18n="export_excel">Експорт Excel (CSV)</span>
  </button>
  </div>
  </div>
@@ -240,22 +234,22 @@
  <div id="content-xy" class="hidden flex-grow flex flex-col overflow-y-auto p-4 space-y-4">
  <div class="bg-amber-50 p-4 rounded-lg border border-amber-200">
  <h3 class="text-sm font-bold text-amber-800 mb-2 flex items-center gap-2">
- <i data-lucide="axis-3d" class="w-4 h-4"></i> Трансформація координат
+ <i data-lucide="axis-3d" class="w-4 h-4"></i> <span data-i18n="xy_title">Трансформація координат</span>
  </h3>
  <p class="text-[10px] text-amber-700 mb-3">
- Перетворення GPS (Lat/Lon) у локальну плоску систему (X/Y в метрах) з можливістю обертання.
+ <span data-i18n="xy_desc">Перетворення GPS (Lat/Lon) у локальну плоску систему (X/Y в метрах) з можливістю обертання.</span>
  </p>
 
  <div class="space-y-4">
  <div>
- <label class="block text-[10px] font-bold text-amber-800 uppercase mb-1">Центр координат (0,0)</label>
+ <label class="block text-[10px] font-bold text-amber-800 uppercase mb-1" data-i18n="origin">Центр координат (0,0)</label>
  <select id="originSelect" class="w-full p-2 border border-amber-300 rounded text-sm bg-white text-amber-900 font-medium" onchange="updateXYPreview()">
- <option value="">Оберіть центр...</option>
+ <option value="" data-i18n="choose_center">Оберіть центр...</option>
  </select>
  </div>
 
  <div>
- <label class="block text-[10px] font-bold text-amber-800 uppercase mb-1">Кут повороту (°)</label>
+ <label class="block text-[10px] font-bold text-amber-800 uppercase mb-1" data-i18n="rotation">Кут повороту (°)</label>
  <div class="flex items-center gap-2 mb-2">
  <button onclick="changeRotation(-1)" class="w-8 h-8 flex items-center justify-center bg-white border border-amber-300 hover:bg-amber-100 rounded text-amber-900 font-bold shadow-sm transition">-</button>
  <input type="number" id="rotationInput" value="0" min="-180" max="180" class="flex-grow h-8 text-sm text-center border border-amber-300 rounded font-mono focus:ring-2 focus:ring-amber-500 outline-none" oninput="syncRotation('input')">
@@ -278,14 +272,14 @@
 
  <div class="space-y-2">
  <button onclick="downloadXYData()" class="w-full py-2 bg-emerald-700 hover:bg-emerald-800 text-white text-sm font-bold rounded shadow-sm flex items-center justify-center gap-2">
- <i data-lucide="file-down" class="w-4 h-4"></i> Завантажити X/Y (.csv)
+ <i data-lucide="file-down" class="w-4 h-4"></i> <span data-i18n="download_xy">Завантажити X/Y (.csv)</span>
  </button>
  <div class="grid grid-cols-2 gap-2">
  <button onclick="downloadCentersXYData()" class="w-full py-2 bg-amber-600 hover:bg-amber-700 text-white text-xs font-bold rounded shadow-sm flex items-center justify-center gap-1">
- <i data-lucide="map" class="w-3 h-3"></i> Експорт Центрів
+ <i data-lucide="map" class="w-3 h-3"></i> <span data-i18n="export_centers">Експорт Центрів</span>
  </button>
  <button onclick="downloadPanoramasXYData()" class="w-full py-2 bg-purple-600 hover:bg-purple-700 text-white text-xs font-bold rounded shadow-sm flex items-center justify-center gap-1">
- <i data-lucide="camera" class="w-3 h-3"></i> Експорт Панорам
+ <i data-lucide="camera" class="w-3 h-3"></i> <span data-i18n="export_panoramas">Експорт Панорам</span>
  </button>
  </div>
  </div>
@@ -297,17 +291,17 @@
  <div id="content-sylvo" class="hidden flex-grow flex flex-col overflow-y-auto p-4 space-y-4">
  <div class="bg-indigo-50 p-4 rounded-lg border border-indigo-200">
  <h3 class="text-sm font-bold text-indigo-800 mb-2 flex items-center gap-2">
- <i data-lucide="table-2" class="w-4 h-4"></i> Експорт Sylvotech
+ <i data-lucide="table-2" class="w-4 h-4"></i> <span data-i18n="sylvo_title">Експорт Sylvotech</span>
  </h3>
  <p class="text-[10px] text-indigo-700 mb-4">
- Вкажіть числові ID для кожної породи. Координати будуть взяті з поворотом, вказаним у вкладці 4.
+ <span data-i18n="sylvo_desc">Вкажіть числові ID для кожної породи. Координати будуть взяті з поворотом, вказаним у вкладці 4.</span>
  </p>
 
  <!-- ID Search Block -->
  <div class="bg-white p-3 rounded border border-indigo-100 shadow-sm mb-4">
- <label class="block text-[10px] font-bold text-slate-500 uppercase mb-1">Пошук ID (Довідник)</label>
+ <label class="block text-[10px] font-bold text-slate-500 uppercase mb-1" data-i18n="sylvo_search">Пошук ID (Довідник)</label>
  <div class="relative">
- <input type="text" placeholder="Почніть вводити назву (напр. Береза)..."
+ <input type="text" data-i18n-ph="ph_sylvo_search" placeholder="Почніть вводити назву (напр. Береза)..."
  class="w-full p-2 text-xs border border-indigo-200 rounded focus:ring-1 focus:ring-indigo-500 outline-none"
  oninput="searchSylvoId(this.value)">
  <div id="sylvoSearchResults" class="absolute left-0 right-0 top-full mt-1 bg-white border border-indigo-100 rounded shadow-lg max-h-40 overflow-y-auto z-10 hidden">
@@ -318,23 +312,23 @@
 
  <!-- Auto-fill Button -->
  <button onclick="autoFillSylvoIds()" class="w-full py-1.5 bg-white border border-indigo-300 hover:bg-indigo-50 text-indigo-700 text-xs font-medium rounded mb-3 flex items-center justify-center gap-1 shadow-sm transition">
- <i data-lucide="wand-2" class="w-3 h-3"></i> Спроба автозаповнення
+ <i data-lucide="wand-2" class="w-3 h-3"></i> <span data-i18n="autofill">Спроба автозаповнення</span>
  </button>
 
  <div id="speciesMappingList" class="space-y-2 mb-4">
  <!-- Inputs generated by JS -->
- <div class="text-xs text-slate-400 italic">Немає порід для відображення</div>
+ <div class="text-xs text-slate-400 italic" data-i18n="no_species">Немає порід для відображення</div>
  </div>
 
  <button onclick="downloadSylvoData()" class="w-full py-2 bg-indigo-700 hover:bg-indigo-800 text-white text-sm font-bold rounded shadow-sm flex items-center justify-center gap-2">
- <i data-lucide="download" class="w-4 h-4"></i> Завантажити Sylvotech.csv
+ <i data-lucide="download" class="w-4 h-4"></i> <span data-i18n="download_sylvo">Завантажити Sylvotech.csv</span>
  </button>
  </div>
  </div>
 
  <!-- Footer -->
  <div class="p-2 bg-slate-800 text-[10px] text-center text-slate-400">
- <span id="storageStatus" class="text-emerald-400">Автозбереження активне</span> | WGS84
+ <span id="storageStatus" class="text-emerald-400" data-i18n="autosave_on">Автозбереження активне</span> | WGS84
  </div>
  </aside>
 
@@ -351,14 +345,14 @@
 
  <!-- Dynamic Legend (Moved to bottom left) -->
  <div id="mapLegend" class="absolute bottom-6 left-6 bg-white/95 backdrop-blur p-3 rounded-lg shadow-lg z-[400] min-w-[140px] max-h-[300px] overflow-y-auto border border-slate-200">
- <h4 class="text-xs font-bold mb-2 text-slate-700 border-b pb-1">Легенда</h4>
+ <h4 class="text-xs font-bold mb-2 text-slate-700 border-b pb-1" data-i18n="legend">Легенда</h4>
  <div class="flex items-center gap-2 mb-1">
  <div class="w-3 h-3 rounded-full bg-red-500 border border-white shadow-sm"></div>
- <span class="text-xs text-slate-600">Центр ділянки</span>
+ <span class="text-xs text-slate-600" data-i18n="legend_center">Центр ділянки</span>
  </div>
  <div class="flex items-center gap-2 mb-1.5">
  <i data-lucide="camera" class="w-3 h-3 text-purple-600"></i>
- <span class="text-xs text-slate-600">Панорама</span>
+ <span class="text-xs text-slate-600" data-i18n="panorama">Панорама</span>
  </div>
  <!-- Species items will be injected here -->
  <div id="speciesLegend"></div>
@@ -385,6 +379,179 @@
  };
 
  const R_earth = 6371e3;
+
+ // --- i18n ---
+ const I18N = {
+ uk: {
+ subtitle: "Інструмент картування лісу",
+ save_file: "Зберегти у файл", save_file_title: "Зберегти проект у файл на комп'ютері",
+ open_file: "Відкрити проект", open_file_title: "Відкрити раніше збережений проект",
+ reset_project: "Скинути проект", reset_title: "Скинути всі дані",
+ tab_points: "1. Точки", tab_input: "2. Ввід", tab_table: "3. Таблиця", tab_xy: "4. X/Y", tab_sylvo: "5. Sylvo",
+ add_point: "Додати точку", add_center: "Додати центр", add_panorama: "Додати панораму",
+ center: "Центр", panorama: "Панорама",
+ mode_absolute: "Координати / GPS / Карта", mode_relative: "Від іншого центру",
+ ph_name_center: "Назва (напр. Сектор А)", ph_name_pano: "Назва (напр. Панорама 1)",
+ ph_lat: "Широта (Lat)", ph_lon: "Довгота (Lon)", ph_meters: "Метри",
+ pick_map: "Вказати точку на карті", pick_cancel: "Скасувати вибір на карті",
+ pick_hint_center: "Клацніть на карті — місце центру ділянки",
+ pick_hint_pano: "Клацніть на карті — місце панорами",
+ pick_toast: "Клацніть на карті, щоб задати координати",
+ picked: "Обрано:", draggable: "Можна перетягнути",
+ use_gps: "Взяти GPS з пристрою", ref_point: "Базова точка (Центр)",
+ azimuth: "Азимут (°)", distance: "Відстань (м)", hint_zero: "Для збігу точок введіть відстань 0",
+ points_list: "Список точок", add_centers_first: "Спочатку додайте центри...", add_center_opt: "Додайте центр",
+ active_center: "Робочий центр", tree_data_csv: "Дані дерев (CSV)", insert_sample: "Вставити приклад",
+ csv_format: "Формат: Номер, Азимут, Відстань, Порода, Діаметр (см), Висота (м)",
+ import_file: "Імпорт файлу", calculate: "Розрахувати",
+ tree_list: "Список дерев", total: "Всього:", clear_list: "Очистити список",
+ clear_list_title: "Видалити всі дерева (точки залишаться)",
+ species: "Порода", th_d: "D (см)", th_h: "H (м)", action: "Дія", export_excel: "Експорт Excel (CSV)",
+ xy_title: "Трансформація координат",
+ xy_desc: "Перетворення GPS (Lat/Lon) у локальну плоску систему (X/Y в метрах) з можливістю обертання.",
+ origin: "Центр координат (0,0)", choose_center: "Оберіть центр...", rotation: "Кут повороту (°)",
+ download_xy: "Завантажити X/Y (.csv)", export_centers: "Експорт Центрів", export_panoramas: "Експорт Панорам",
+ sylvo_title: "Експорт Sylvotech",
+ sylvo_desc: "Вкажіть числові ID для кожної породи. Координати будуть взяті з поворотом, вказаним у вкладці 4.",
+ sylvo_search: "Пошук ID (Довідник)", ph_sylvo_search: "Почніть вводити назву (напр. Береза)...",
+ autofill: "Спроба автозаповнення", no_species: "Немає порід для відображення",
+ download_sylvo: "Завантажити Sylvotech.csv",
+ autosave_on: "Автозбереження активне", saved: "Збережено", save_unavailable: "Збереження недоступне",
+ legend: "Легенда", legend_center: "Центр ділянки", no_trees: "Дерева відсутні",
+ no_data_preview: "Немає даних для відображення",
+ tree: "Дерево №", confirm_reset: "Видалити всі дані і почати заново?",
+ load_error: "Помилка завантаження збереження",
+ check_data: "Перевірте дані", coord_error: "Помилка координат",
+ center_added: "Центр додано", pano_added: "Панораму додано",
+ center_moved: "Центр переміщено, дерева перераховано", pano_moved: "Панораму переміщено",
+ select_center_and_data: "Оберіть центр та введіть дані", trees_added: "Додано {n} дерев",
+ tree_deleted: "Дерево видалено", confirm_delete_point: "Видалити точку?",
+ no_data: "Немає даних", no_centers: "Немає центрів", no_panoramas: "Немає панорам",
+ id_copied: "ID {id} скопійовано!", autofill_found: "Автоматично знайдено {n} ID",
+ no_matches: "Співпадінь не знайдено",
+ file_loaded: "Файл \"{name}\" завантажено", geo_unavailable: "Геолокація недоступна",
+ list_already_empty: "Список дерев уже порожній",
+ confirm_clear_trees: "Видалити всі дерева ({n} шт.)?\n\nЦентри та панорами залишаться на місці.",
+ trees_removed: "Видалено {n} дерев",
+ project_empty: "Проект порожній — нема чого зберігати",
+ project_saved: "Проект збережено: {c} центрів, {p} панорам, {t} дерев",
+ project_loaded: "Завантажено: {c} центрів, {p} панорам, {t} дерев",
+ bad_json: "Не вдалося прочитати файл: пошкоджений JSON",
+ not_project: "Це не файл проекту Marteloscope",
+ confirm_replace: "Поточний проект буде замінено завантаженим. Продовжити?\n\nПорада: спершу збережіть поточний проект у файл.",
+ read_error: "Помилка читання файлу",
+ unit_cm: "см", unit_m: "м", dist_short: "Відст."
+ },
+ en: {
+ subtitle: "Forestry Mapping Tool",
+ save_file: "Save to file", save_file_title: "Save the project as a file on your computer",
+ open_file: "Open project", open_file_title: "Open a previously saved project",
+ reset_project: "Reset project", reset_title: "Erase all data",
+ tab_points: "1. Points", tab_input: "2. Input", tab_table: "3. Table", tab_xy: "4. X/Y", tab_sylvo: "5. Sylvo",
+ add_point: "Add point", add_center: "Add centre", add_panorama: "Add panorama",
+ center: "Centre", panorama: "Panorama",
+ mode_absolute: "Coordinates / GPS / Map", mode_relative: "From another centre",
+ ph_name_center: "Name (e.g. Sector A)", ph_name_pano: "Name (e.g. Panorama 1)",
+ ph_lat: "Latitude (Lat)", ph_lon: "Longitude (Lon)", ph_meters: "Metres",
+ pick_map: "Pick a point on the map", pick_cancel: "Cancel map picking",
+ pick_hint_center: "Click on the map — location of the plot centre",
+ pick_hint_pano: "Click on the map — location of the panorama",
+ pick_toast: "Click on the map to set the coordinates",
+ picked: "Picked:", draggable: "Can be dragged",
+ use_gps: "Use device GPS", ref_point: "Reference point (Centre)",
+ azimuth: "Azimuth (°)", distance: "Distance (m)", hint_zero: "Enter distance 0 for coincident points",
+ points_list: "Point list", add_centers_first: "Add centres first...", add_center_opt: "Add a centre",
+ active_center: "Working centre", tree_data_csv: "Tree data (CSV)", insert_sample: "Insert sample",
+ csv_format: "Format: Number, Azimuth, Distance, Species, Diameter (cm), Height (m)",
+ import_file: "Import file", calculate: "Calculate",
+ tree_list: "Tree list", total: "Total:", clear_list: "Clear list",
+ clear_list_title: "Delete all trees (points are kept)",
+ species: "Species", th_d: "D (cm)", th_h: "H (m)", action: "Action", export_excel: "Export Excel (CSV)",
+ xy_title: "Coordinate transformation",
+ xy_desc: "Converts GPS (Lat/Lon) into a local plane system (X/Y in metres) with optional rotation.",
+ origin: "Origin of coordinates (0,0)", choose_center: "Choose a centre...", rotation: "Rotation angle (°)",
+ download_xy: "Download X/Y (.csv)", export_centers: "Export centres", export_panoramas: "Export panoramas",
+ sylvo_title: "Sylvotech export",
+ sylvo_desc: "Set a numeric ID for every species. Coordinates use the rotation defined on tab 4.",
+ sylvo_search: "ID lookup (reference list)", ph_sylvo_search: "Start typing a name (e.g. Birch)...",
+ autofill: "Try auto-fill", no_species: "No species to show",
+ download_sylvo: "Download Sylvotech.csv",
+ autosave_on: "Autosave active", saved: "Saved", save_unavailable: "Saving unavailable",
+ legend: "Legend", legend_center: "Plot centre", no_trees: "No trees yet",
+ no_data_preview: "No data to display",
+ tree: "Tree No. ", confirm_reset: "Delete all data and start over?",
+ load_error: "Could not load the saved data",
+ check_data: "Check the input", coord_error: "Invalid coordinates",
+ center_added: "Centre added", pano_added: "Panorama added",
+ center_moved: "Centre moved, trees recalculated", pano_moved: "Panorama moved",
+ select_center_and_data: "Choose a centre and enter data", trees_added: "{n} trees added",
+ tree_deleted: "Tree deleted", confirm_delete_point: "Delete this point?",
+ no_data: "No data", no_centers: "No centres", no_panoramas: "No panoramas",
+ id_copied: "ID {id} copied!", autofill_found: "{n} IDs matched automatically",
+ no_matches: "No matches found",
+ file_loaded: "File \"{name}\" loaded", geo_unavailable: "Geolocation unavailable",
+ list_already_empty: "The tree list is already empty",
+ confirm_clear_trees: "Delete all trees ({n})?\n\nCentres and panoramas will be kept.",
+ trees_removed: "{n} trees deleted",
+ project_empty: "The project is empty — nothing to save",
+ project_saved: "Project saved: {c} centres, {p} panoramas, {t} trees",
+ project_loaded: "Loaded: {c} centres, {p} panoramas, {t} trees",
+ bad_json: "Could not read the file: malformed JSON",
+ not_project: "This is not a Marteloscope project file",
+ confirm_replace: "The current project will be replaced by the loaded one. Continue?\n\nTip: save the current project to a file first.",
+ read_error: "File reading error",
+ unit_cm: "cm", unit_m: "m", dist_short: "Dist"
+ }
+ };
+
+ let lang = 'uk';
+
+ function t(key, vars) {
+ let str = (I18N[lang] && I18N[lang][key]) || (I18N.uk[key]) || key;
+ if (vars) Object.keys(vars).forEach(k => { str = str.split('{' + k + '}').join(vars[k]); });
+ return str;
+ }
+
+ window.setLang = function(l) {
+ if (!I18N[l]) return;
+ lang = l;
+ lsSet('marteloscope_lang', l);
+ applyLang();
+ }
+
+ function applyLang() {
+ document.documentElement.lang = lang;
+
+ document.querySelectorAll('[data-i18n]').forEach(el => { el.textContent = t(el.getAttribute('data-i18n')); });
+ document.querySelectorAll('[data-i18n-ph]').forEach(el => { el.placeholder = t(el.getAttribute('data-i18n-ph')); });
+ document.querySelectorAll('[data-i18n-title]').forEach(el => { el.title = t(el.getAttribute('data-i18n-title')); });
+
+ ['uk','en'].forEach(l => {
+ const b = document.getElementById('lang-' + l);
+ if (b) b.className = 'px-2 py-1 transition ' + (lang === l ? 'bg-emerald-500 text-white' : 'text-emerald-300 hover:text-white');
+ });
+
+ // Dynamic pieces
+ setPointType(currentPointType);
+ const pb = document.getElementById('pickMapBtn');
+ if (pb) pb.innerHTML = pickingMode
+ ? '<i data-lucide="x" class="w-3 h-3"></i> ' + t('pick_cancel')
+ : '<i data-lucide="mouse-pointer-click" class="w-3 h-3"></i> ' + t('pick_map');
+
+ centers.forEach(c => { if (c.marker) c.marker.setPopupContent(centerPopupHtml(c)); });
+ panoramas.forEach(p => { if (p.marker) p.marker.setPopupContent(panoPopupHtml(p)); });
+ trees.forEach(tr => { if (tr.marker) tr.marker.setPopupContent(treePopupHtml(tr)); });
+
+ renderCentersList();
+ updateDropdowns();
+ renderTreeTable();
+ updateLegend();
+ updateSylvoUI();
+ updateXYPreview();
+
+ if (window.lucide) lucide.createIcons();
+ }
+
 
  // Sylvo Database
  const sylvoSpeciesDB = [
@@ -427,14 +594,11 @@
  window.onload = function() {
  if (window.lucide) lucide.createIcons();
  initMap();
+ const savedLang = lsGet('marteloscope_lang');
+ if (savedLang && I18N[savedLang]) lang = savedLang;
  loadFromStorage();
 
- if (centers.length > 0 || panoramas.length > 0) {
- renderCentersList();
- updateDropdowns();
- renderTreeTable();
- updateLegend();
- }
+ applyLang();
 
  // Esc cancels picking mode
  document.addEventListener('keydown', function(e) {
@@ -501,17 +665,15 @@
  setCenterMode('absolute');
  switchTab('centers');
  btn.className = "w-full py-2 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold rounded transition flex items-center justify-center gap-1";
- btn.innerHTML = '<i data-lucide="x" class="w-3 h-3"></i> Скасувати вибір на карті';
+ btn.innerHTML = '<i data-lucide="x" class="w-3 h-3"></i> ' + t('pick_cancel');
  mapEl.classList.add('map-picking');
  banner.classList.remove('hidden');
  document.getElementById('pickBannerText').innerText =
- currentPointType === 'center'
- ? 'Клацніть на карті — місце центру ділянки'
- : 'Клацніть на карті — місце панорами';
- showToast("Клацніть на карті, щоб задати координати");
+ currentPointType === 'center' ? t('pick_hint_center') : t('pick_hint_pano');
+ showToast(t('pick_toast'));
  } else {
  btn.className = "w-full py-2 bg-slate-200 hover:bg-slate-300 text-slate-700 text-xs rounded transition flex items-center justify-center gap-1";
- btn.innerHTML = '<i data-lucide="mouse-pointer-click" class="w-3 h-3"></i> Вказати точку на карті';
+ btn.innerHTML = '<i data-lucide="mouse-pointer-click" class="w-3 h-3"></i> ' + t('pick_map');
  mapEl.classList.remove('map-picking');
  banner.classList.add('hidden');
  }
@@ -541,10 +703,10 @@
  });
  pickMarker.on('dragend', function(ev) {
  const ll = ev.target.getLatLng();
- pickMarker.setPopupContent(`Обрано:<br>${ll.lat.toFixed(6)}, ${ll.lng.toFixed(6)}<br><i>Можна перетягнути</i>`);
+ pickMarker.setPopupContent(`${t('picked')}<br>${ll.lat.toFixed(6)}, ${ll.lng.toFixed(6)}<br><i>${t('draggable')}</i>`);
  });
  }
- pickMarker.bindPopup(`Обрано:<br>${lat.toFixed(6)}, ${lon.toFixed(6)}<br><i>Можна перетягнути</i>`).openPopup();
+ pickMarker.bindPopup(`${t('picked')}<br>${lat.toFixed(6)}, ${lon.toFixed(6)}<br><i>${t('draggable')}</i>`).openPopup();
  }
 
  function clearPickMarker() {
@@ -591,12 +753,12 @@
 
  const status = document.getElementById('storageStatus');
  if (!ok) {
- status.innerText = "Збереження недоступне";
+ status.innerText = t('save_unavailable');
  status.className = "text-amber-400";
  return;
  }
- status.innerText = "Збережено";
- setTimeout(() => status.innerText = "Автозбереження активне", 2000);
+ status.innerText = t('saved');
+ setTimeout(() => status.innerText = t('autosave_on'), 2000);
  }
 
  function loadFromStorage() {
@@ -610,7 +772,7 @@
  hydrateProject(JSON.parse(raw));
  } catch (e) {
  console.error("Save file corrupted", e);
- showToast("Помилка завантаження збереження");
+ showToast(t('load_error'));
  }
  }
 
@@ -666,8 +828,8 @@
 
  // --- Clear all trees (points stay) ---
  window.clearAllTrees = function() {
- if (trees.length === 0) { showToast("Список дерев уже порожній"); return; }
- if (!confirm(`Видалити всі дерева (${trees.length} шт.)?\n\nЦентри та панорами залишаться на місці.`)) return;
+ if (trees.length === 0) { showToast(t('list_already_empty')); return; }
+ if (!confirm(t('confirm_clear_trees', {n: trees.length}))) return;
 
  trees.forEach(t => {
  if (t.marker) map.removeLayer(t.marker);
@@ -681,13 +843,13 @@
  updateLegend();
  updateXYPreview();
  saveToStorage();
- showToast(`Видалено ${removed} дерев`);
+ showToast(t('trees_removed', {n: removed}));
  }
 
  // --- Project file: save / load ---
  window.saveProjectFile = function() {
  if (centers.length === 0 && panoramas.length === 0 && trees.length === 0) {
- showToast("Проект порожній — нема чого зберігати");
+ showToast(t('project_empty'));
  return;
  }
 
@@ -711,7 +873,7 @@
  link.click();
  setTimeout(() => URL.revokeObjectURL(link.href), 1000);
 
- showToast(`Проект збережено: ${centers.length} центрів, ${panoramas.length} панорам, ${trees.length} дерев`);
+ showToast(t('project_saved', {c: centers.length, p: panoramas.length, t: trees.length}));
  }
 
  window.loadProjectFile = function(input) {
@@ -725,17 +887,17 @@
  try {
  data = JSON.parse(e.target.result);
  } catch (err) {
- showToast("Не вдалося прочитати файл: пошкоджений JSON");
+ showToast(t('bad_json'));
  return;
  }
 
  if (!data || (!Array.isArray(data.centers) && !Array.isArray(data.trees))) {
- showToast("Це не файл проекту Marteloscope");
+ showToast(t('not_project'));
  return;
  }
 
  const hasData = centers.length > 0 || panoramas.length > 0 || trees.length > 0;
- if (hasData && !confirm("Поточний проект буде замінено завантаженим. Продовжити?\n\nПорада: спершу збережіть поточний проект у файл.")) return;
+ if (hasData && !confirm(t('confirm_replace'))) return;
 
  wipeProjectState();
  hydrateProject(data);
@@ -752,14 +914,14 @@
  }
 
  saveToStorage();
- showToast(`Завантажено: ${centers.length} центрів, ${panoramas.length} панорам, ${trees.length} дерев`);
+ showToast(t('project_loaded', {c: centers.length, p: panoramas.length, t: trees.length}));
  };
- reader.onerror = () => showToast("Помилка читання файлу");
+ reader.onerror = () => showToast(t('read_error'));
  reader.readAsText(file, 'UTF-8');
  }
 
  window.clearStorage = function() {
- if(confirm("Видалити всі дані і почати заново?")) {
+ if(confirm(t('confirm_reset'))) {
  lsDel('marteloscope_v4');
  lsDel('marteloscope_v3');
  location.reload();
@@ -788,7 +950,7 @@
  trees.forEach(t => { if(t.species) uniqueSpecies.add(t.species.trim()); });
 
  if (uniqueSpecies.size === 0) {
- legendDiv.innerHTML = `<div class="text-[10px] text-slate-400 italic">Дерева відсутні</div>`;
+ legendDiv.innerHTML = `<div class="text-[10px] text-slate-400 italic">${t('no_trees')}</div>`;
  return;
  }
 
@@ -819,21 +981,21 @@
  btnCenter.classList.remove('text-red-500');
  btnPano.classList.remove('bg-white', 'shadow-sm', 'text-purple-700');
  btnPano.classList.add('text-purple-500');
- addBtn.innerHTML = '<i data-lucide="plus" class="w-4 h-4"></i> Додати центр';
- nameInput.placeholder = "Назва (напр. Сектор А)";
+ addBtn.innerHTML = '<i data-lucide="plus" class="w-4 h-4"></i> ' + t('add_center');
+ nameInput.placeholder = t('ph_name_center');
  } else {
  btnPano.classList.add('bg-white', 'shadow-sm', 'text-purple-700');
  btnPano.classList.remove('text-purple-500');
  btnCenter.classList.remove('bg-white', 'shadow-sm', 'text-red-700');
  btnCenter.classList.add('text-red-500');
- addBtn.innerHTML = '<i data-lucide="camera" class="w-4 h-4"></i> Додати панораму';
- nameInput.placeholder = "Назва (напр. Панорама 1)";
+ addBtn.innerHTML = '<i data-lucide="camera" class="w-4 h-4"></i> ' + t('add_panorama');
+ nameInput.placeholder = t('ph_name_pano');
  }
 
  // Refresh picking marker colour / banner text if picking is active
  if (pickingMode) {
  document.getElementById('pickBannerText').innerText =
- type === 'center' ? 'Клацніть на карті — місце центру ділянки' : 'Клацніть на карті — місце панорами';
+ type === 'center' ? t('pick_hint_center') : t('pick_hint_pano');
  if (pickMarker) {
  const ll = pickMarker.getLatLng();
  setPickedCoords(ll.lat, ll.lng);
@@ -862,7 +1024,9 @@
 
  window.addPoint = function() {
  const nameInput = document.getElementById('centerName');
- const name = nameInput.value || (currentPointType === 'center' ? `Сектор ${centers.length + 1}` : `Панорама ${panoramas.length + 1}`);
+ const name = nameInput.value || (currentPointType === 'center'
+ ? (lang === 'uk' ? 'Сектор ' : 'Sector ') + (centers.length + 1)
+ : (lang === 'uk' ? 'Панорама ' : 'Panorama ') + (panoramas.length + 1));
  let lat, lon;
 
  if (centerMode === 'absolute') {
@@ -872,14 +1036,14 @@
  const refId = document.getElementById('refCenterSelect').value;
  const az = parseFloat(document.getElementById('centerAz').value);
  const dist = parseFloat(document.getElementById('centerDist').value);
- if (!refId || isNaN(az) || isNaN(dist)) { showToast("Перевірте дані"); return; }
+ if (!refId || isNaN(az) || isNaN(dist)) { showToast(t('check_data')); return; }
  const ref = centers.find(c => c.id === refId);
  const coords = calculateDestination(ref.lat, ref.lon, az, dist);
  lat = coords.lat;
  lon = coords.lon;
  }
 
- if (isNaN(lat) || isNaN(lon)) { showToast("Помилка координат"); return; }
+ if (isNaN(lat) || isNaN(lon)) { showToast(t('coord_error')); return; }
 
  if (currentPointType === 'center') {
  const centerObj = {
@@ -888,7 +1052,7 @@
  };
  centers.push(centerObj);
  createCenterMarker(centerObj);
- showToast("Центр додано");
+ showToast(t('center_added'));
  } else {
  const panoObj = {
  id: Date.now().toString(),
@@ -896,7 +1060,7 @@
  };
  panoramas.push(panoObj);
  createPanoramaMarker(panoObj);
- showToast("Панораму додано");
+ showToast(t('pano_added'));
  }
 
  nameInput.value = '';
@@ -917,16 +1081,24 @@
  iconSize: [14, 14], iconAnchor: [7, 7]
  });
  c.marker = L.marker([c.lat, c.lon], {icon, draggable: true}).addTo(map)
- .bindPopup(`<b>${c.name}</b> (Центр)<br>${c.lat.toFixed(6)}, ${c.lon.toFixed(6)}<br><i>Можна перетягнути</i>`);
+ .bindPopup(centerPopupHtml(c));
 
  c.marker.on('dragend', function(e) {
  const ll = e.target.getLatLng();
  c.lat = ll.lat; c.lon = ll.lng;
- c.marker.setPopupContent(`<b>${c.name}</b> (Центр)<br>${c.lat.toFixed(6)}, ${c.lon.toFixed(6)}<br><i>Можна перетягнути</i>`);
+ c.marker.setPopupContent(centerPopupHtml(c));
  recomputeTreesForCenter(c);
  renderCentersList(); renderTreeTable(); updateXYPreview(); saveToStorage();
- showToast("Центр переміщено, дерева перераховано");
+ showToast(t('center_moved'));
  });
+ }
+
+ function centerPopupHtml(c) {
+ return `<b>${c.name}</b> (${t('center')})<br>${c.lat.toFixed(6)}, ${c.lon.toFixed(6)}<br><i>${t('draggable')}</i>`;
+ }
+
+ function panoPopupHtml(p) {
+ return `<b>${p.name}</b> (${t('panorama')})<br>${p.lat.toFixed(6)}, ${p.lon.toFixed(6)}<br><i>${t('draggable')}</i>`;
  }
 
  function createPanoramaMarker(p) {
@@ -938,14 +1110,14 @@
  iconSize: [20, 20], iconAnchor: [10, 10]
  });
  p.marker = L.marker([p.lat, p.lon], {icon, draggable: true}).addTo(map)
- .bindPopup(`<b>${p.name}</b> (Панорама)<br>${p.lat.toFixed(6)}, ${p.lon.toFixed(6)}<br><i>Можна перетягнути</i>`);
+ .bindPopup(panoPopupHtml(p));
 
  p.marker.on('dragend', function(e) {
  const ll = e.target.getLatLng();
  p.lat = ll.lat; p.lon = ll.lng;
- p.marker.setPopupContent(`<b>${p.name}</b> (Панорама)<br>${p.lat.toFixed(6)}, ${p.lon.toFixed(6)}<br><i>Можна перетягнути</i>`);
+ p.marker.setPopupContent(panoPopupHtml(p));
  renderCentersList(); updateXYPreview(); saveToStorage();
- showToast("Панораму переміщено");
+ showToast(t('pano_moved'));
  });
  }
 
@@ -953,7 +1125,7 @@
  window.processTrees = function() {
  const centerId = document.getElementById('activeCenterSelect').value;
  const text = document.getElementById('csvInput').value;
- if (!centerId || !text.trim()) { showToast("Оберіть центр та введіть дані"); return; }
+ if (!centerId || !text.trim()) { showToast(t('select_center_and_data')); return; }
 
  const center = centers.find(c => c.id === centerId);
  const lines = text.split(/\r?\n/);
@@ -967,7 +1139,7 @@
  const num = p[0];
  const az = parseFloat(p[1]);
  const dist = parseFloat(p[2]);
- const species = p[3] || "Невідомо";
+ const species = p[3] || (lang === 'uk' ? "Невідомо" : "Unknown");
  const dbh = parseFloat(p[4]) || 0;
  const height = parseFloat(p[5]) || 0;
 
@@ -987,7 +1159,7 @@
  });
 
  if (count > 0) {
- showToast(`Додано ${count} дерев`);
+ showToast(t('trees_added', {n: count}));
  document.getElementById('csvInput').value = "";
  updateTreeCount();
  renderTreeTable();
@@ -1000,9 +1172,9 @@
  }
  }
 
- function createTreeMarker(t) {
- const color = getSpeciesColor(t.species);
- const radius = getMarkerRadius(t.dbh);
+ function createTreeMarker(tr) {
+ const color = getSpeciesColor(tr.species);
+ const radius = getMarkerRadius(tr.dbh);
 
  const icon = L.divIcon({
  className: 'tree-marker',
@@ -1011,57 +1183,57 @@
  iconAnchor: [radius, radius]
  });
 
- t.marker = L.marker([t.lat, t.lon], {icon, draggable: true}).addTo(map)
- .bindPopup(treePopupHtml(t));
+ tr.marker = L.marker([tr.lat, tr.lon], {icon, draggable: true}).addTo(map)
+ .bindPopup(treePopupHtml(tr));
 
- const center = centers.find(c => c.id === t.centerId);
+ const center = centers.find(c => c.id === tr.centerId);
  if (center) {
- t.line = L.polyline([[center.lat, center.lon], [t.lat, t.lon]], {
+ tr.line = L.polyline([[center.lat, center.lon], [tr.lat, tr.lon]], {
  color: color, weight: 1, opacity: 0.2, dashArray: '3, 3'
  }).addTo(map);
  }
 
  // Drag a tree -> azimuth and distance are recalculated from its center
- t.marker.on('dragend', function(e) {
+ tr.marker.on('dragend', function(e) {
  const ll = e.target.getLatLng();
- const c = centers.find(x => x.id === t.centerId);
- t.lat = ll.lat; t.lon = ll.lng;
+ const c = centers.find(x => x.id === tr.centerId);
+ tr.lat = ll.lat; tr.lon = ll.lng;
  if (c) {
- const inv = calculateAzimuthDistance(c.lat, c.lon, t.lat, t.lon);
- t.az = parseFloat(inv.az.toFixed(1));
- t.dist = parseFloat(inv.dist.toFixed(2));
- if (t.line) t.line.setLatLngs([[c.lat, c.lon], [t.lat, t.lon]]);
+ const inv = calculateAzimuthDistance(c.lat, c.lon, tr.lat, tr.lon);
+ tr.az = parseFloat(inv.az.toFixed(1));
+ tr.dist = parseFloat(inv.dist.toFixed(2));
+ if (tr.line) tr.line.setLatLngs([[c.lat, c.lon], [tr.lat, tr.lon]]);
  }
- t.marker.setPopupContent(treePopupHtml(t));
+ tr.marker.setPopupContent(treePopupHtml(tr));
  renderTreeTable(); updateXYPreview(); saveToStorage();
- showToast(`Дерево №${t.num}: Az ${t.az}°, ${t.dist} м`);
+ showToast(`${t('tree')}${tr.num}: Az ${tr.az}°, ${tr.dist} ${t('unit_m')}`);
  });
  }
 
- function treePopupHtml(t) {
+ function treePopupHtml(tr) {
  return `
  <div class="text-xs">
- <b>Дерево №${t.num}</b> (${t.species})<br>
- D: ${t.dbh} см, H: ${t.height} м<br>
- Az: ${t.az}°, Dist: ${t.dist}м<br>
- <i>Можна перетягнути</i>
+ <b>${t('tree')}${tr.num}</b> (${tr.species})<br>
+ D: ${tr.dbh} ${t('unit_cm')}, H: ${tr.height} ${t('unit_m')}<br>
+ Az: ${tr.az}°, ${t('dist_short')}: ${tr.dist} ${t('unit_m')}<br>
+ <i>${t('draggable')}</i>
  </div>
  `;
  }
 
  window.deleteTree = function(treeId) {
- const idx = trees.findIndex(t => t.id == treeId);
+ const idx = trees.findIndex(x => x.id == treeId);
  if (idx > -1) {
- const t = trees[idx];
- if(t.marker) map.removeLayer(t.marker);
- if(t.line) map.removeLayer(t.line);
+ const tr = trees[idx];
+ if(tr.marker) map.removeLayer(tr.marker);
+ if(tr.line) map.removeLayer(tr.line);
  trees.splice(idx, 1);
 
  renderTreeTable();
  updateTreeCount();
  updateLegend();
  saveToStorage();
- showToast("Дерево видалено");
+ showToast(t('tree_deleted'));
  }
  }
 
@@ -1171,7 +1343,7 @@
  ctx.font = "12px sans-serif";
  ctx.fillStyle = "#94a3b8";
  ctx.textAlign = "center";
- ctx.fillText("Немає даних для відображення", w/2, h/2);
+ ctx.fillText(t('no_data_preview'), w/2, h/2);
  return;
  }
 
@@ -1225,7 +1397,7 @@
  }
 
  window.downloadXYData = function() {
- if (trees.length === 0 && centers.length === 0) { showToast("Немає даних"); return; }
+ if (trees.length === 0 && centers.length === 0) { showToast(t('no_data')); return; }
 
  const rot = parseInt(document.getElementById('rotationSlider').value);
  const originId = document.getElementById('originSelect').value;
@@ -1263,7 +1435,7 @@
  }
 
  window.downloadCentersXYData = function() {
- if (centers.length === 0) { showToast("Немає центрів"); return; }
+ if (centers.length === 0) { showToast(t('no_centers')); return; }
  const rot = parseInt(document.getElementById('rotationSlider').value);
  const originId = document.getElementById('originSelect').value;
  let origin = centers[0];
@@ -1286,7 +1458,7 @@
  }
 
  window.downloadPanoramasXYData = function() {
- if (panoramas.length === 0) { showToast("Немає панорам"); return; }
+ if (panoramas.length === 0) { showToast(t('no_panoramas')); return; }
  const rot = parseInt(document.getElementById('rotationSlider').value);
  const originId = document.getElementById('originSelect').value;
  let origin = centers[0];
@@ -1317,7 +1489,7 @@
  trees.forEach(t => unique.add(t.species.trim()));
 
  if (unique.size === 0) {
- container.innerHTML = '<div class="text-xs text-slate-400 italic">Дерева відсутні</div>';
+ container.innerHTML = `<div class="text-xs text-slate-400 italic">${t('no_trees')}</div>`;
  return;
  }
 
@@ -1368,7 +1540,7 @@
  div.innerHTML = `<span class="text-xs text-slate-700">${s.name}</span> <span class="text-xs font-bold text-indigo-700 bg-indigo-100 px-1.5 py-0.5 rounded">${s.id}</span>`;
  div.onclick = () => {
  // Copy ID to clipboard
- navigator.clipboard.writeText(s.id).then(() => showToast(`ID ${s.id} скопійовано!`));
+ navigator.clipboard.writeText(s.id).then(() => showToast(t('id_copied', {id: s.id})));
  resDiv.classList.add('hidden');
  };
  resDiv.appendChild(div);
@@ -1391,14 +1563,14 @@
  if(matches > 0) {
  saveToStorage();
  updateSylvoUI();
- showToast(`Автоматично знайдено ${matches} ID`);
+ showToast(t('autofill_found', {n: matches}));
  } else {
- showToast("Співпадінь не знайдено");
+ showToast(t('no_matches'));
  }
  }
 
  window.downloadSylvoData = function() {
- if (trees.length === 0) { showToast("Немає даних"); return; }
+ if (trees.length === 0) { showToast(t('no_data')); return; }
 
  // Get transform params from Tab 4
  const rot = parseInt(document.getElementById('rotationSlider').value);
@@ -1456,7 +1628,7 @@
  <div class="w-2 h-2 bg-red-500 rounded-full"></div>
  <div>
  <div class="text-xs font-bold text-slate-700">${c.name}</div>
- <div class="text-[10px] text-slate-400 font-mono">Центр | ${c.lat.toFixed(5)}, ${c.lon.toFixed(5)}</div>
+ <div class="text-[10px] text-slate-400 font-mono">${t('center')} | ${c.lat.toFixed(5)}, ${c.lon.toFixed(5)}</div>
  </div>
  </div>
  <button onclick="removePoint('${c.id}', 'center')" class="text-slate-300 hover:text-red-500"><i data-lucide="trash-2" class="w-3 h-3"></i></button>
@@ -1473,7 +1645,7 @@
  <i data-lucide="camera" class="w-3 h-3 text-purple-600"></i>
  <div>
  <div class="text-xs font-bold text-slate-700">${p.name}</div>
- <div class="text-[10px] text-slate-400 font-mono">Панорама | ${p.lat.toFixed(5)}, ${p.lon.toFixed(5)}</div>
+ <div class="text-[10px] text-slate-400 font-mono">${t('panorama')} | ${p.lat.toFixed(5)}, ${p.lon.toFixed(5)}</div>
  </div>
  </div>
  <button onclick="removePoint('${p.id}', 'panorama')" class="text-slate-300 hover:text-red-500"><i data-lucide="trash-2" class="w-3 h-3"></i></button>
@@ -1527,14 +1699,14 @@
 
  function updateDropdowns() {
  const opts = centers.map(c => `<option value="${c.id}">${c.name}</option>`).join('');
- document.getElementById('activeCenterSelect').innerHTML = opts || '<option>Додайте центр</option>';
- document.getElementById('refCenterSelect').innerHTML = opts || '<option>Додайте центр</option>';
+ const empty = `<option value="">${t('add_center_opt')}</option>`;
 
- const currentOrigin = document.getElementById('originSelect').value;
- document.getElementById('originSelect').innerHTML = opts || '<option value="">Додайте центр</option>';
- if(currentOrigin && centers.find(c => c.id === currentOrigin)) {
- document.getElementById('originSelect').value = currentOrigin;
- }
+ ['activeCenterSelect', 'refCenterSelect', 'originSelect'].forEach(id => {
+ const el = document.getElementById(id);
+ const prev = el.value;
+ el.innerHTML = opts || empty;
+ if (prev && centers.find(c => c.id === prev)) el.value = prev;
+ });
  }
 
  function calculateDestination(lat1, lon1, az, dist) {
@@ -1552,14 +1724,14 @@
  const reader = new FileReader();
  reader.onload = e => {
  document.getElementById('csvInput').value = e.target.result;
- showToast(`Файл "${file.name}" завантажено`);
+ showToast(t('file_loaded', {name: file.name}));
  };
  reader.readAsText(file, 'UTF-8');
  input.value = '';
  }
 
  window.downloadAllData = function() {
- if (trees.length === 0) { showToast("Немає даних"); return; }
+ if (trees.length === 0) { showToast(t('no_data')); return; }
  let csv = "Center,Lat,Lon,TreeNum,Species,DBH,Height,Azimuth,Dist,TreeLat,TreeLon\n";
  trees.forEach(t => {
  const c = centers.find(x => x.id === t.centerId);
@@ -1573,11 +1745,13 @@
  }
 
  window.insertSampleData = function() {
- document.getElementById('csvInput').value = "1, 45, 12.5, Сосна, 32, 24\n2, 120, 8.3, Дуб, 44, 21\n3, 270, 15.0, Береза, 28, 19\n4, 310, 22.1, Ялина, 50, 28";
+ document.getElementById('csvInput').value = lang === 'uk'
+ ? "1, 45, 12.5, Сосна, 32, 24\n2, 120, 8.3, Дуб, 44, 21\n3, 270, 15.0, Береза, 28, 19\n4, 310, 22.1, Ялина, 50, 28"
+ : "1, 45, 12.5, Pine, 32, 24\n2, 120, 8.3, Oak, 44, 21\n3, 270, 15.0, Birch, 28, 19\n4, 310, 22.1, Spruce, 50, 28";
  }
 
  window.removePoint = function(id, type) {
- if(!confirm("Видалити точку?")) return;
+ if(!confirm(t('confirm_delete_point'))) return;
 
  if (type === 'center') {
  centers = centers.filter(c => {
@@ -1625,7 +1799,7 @@
  document.getElementById('centerLon').value = p.coords.longitude.toFixed(6);
  map.setView([p.coords.latitude, p.coords.longitude], 19);
  });
- } else showToast("Геолокація недоступна");
+ } else showToast(t('geo_unavailable'));
  }
 
  window.updateTreeCount = function() {

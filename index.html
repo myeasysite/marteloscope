@@ -196,6 +196,35 @@
  <h3 class="text-[10px] font-bold text-slate-400 uppercase mb-2 tracking-wider" data-i18n="points_list">Список точок</h3>
  <ul id="centersList" class="space-y-2"></ul>
  </div>
+
+ <div class="bg-white p-4 rounded-lg border border-slate-200 shadow-sm">
+ <h3 class="text-sm font-bold text-slate-700 mb-2" data-i18n="links_title">Прив'язки центрів</h3>
+ <div class="overflow-x-auto">
+ <table class="w-full text-xs">
+ <thead>
+ <tr class="text-left text-slate-400">
+ <th class="p-1 font-bold" data-i18n="link_from">Від</th>
+ <th class="p-1 font-bold" data-i18n="link_to">До</th>
+ <th class="p-1 font-bold" data-i18n="link_az">Азимут</th>
+ <th class="p-1 font-bold" data-i18n="link_dist">Відстань</th>
+ <th class="p-1"></th>
+ </tr>
+ </thead>
+ <tbody id="linksTableBody"></tbody>
+ </table>
+ </div>
+ <div class="flex gap-2 mt-2">
+ <select id="newLinkFrom" class="flex-1 p-2 border rounded text-sm bg-white"></select>
+ <select id="newLinkTo" class="flex-1 p-2 border rounded text-sm bg-white"></select>
+ <input type="number" id="newLinkAz" step="any" placeholder="0-360" class="w-20 p-2 border rounded text-sm">
+ <input type="number" id="newLinkDist" step="any" data-i18n-ph="ph_meters" placeholder="Метри" class="w-20 p-2 border rounded text-sm">
+ <button onclick="addLinkFromForm()" class="px-3 py-2 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold rounded shadow-sm" data-i18n="link_add">Додати</button>
+ </div>
+ <div class="mt-3">
+ <textarea id="pasteLinksArea" rows="3" class="w-full p-2 border rounded text-xs font-mono" data-i18n-ph="ph_paste_links" placeholder="Від, До, Азимут, Відстань — по рядку"></textarea>
+ <button onclick="pasteLinks()" class="mt-1 px-3 py-2 bg-slate-200 hover:bg-slate-300 text-slate-700 text-xs font-bold rounded" data-i18n="link_paste">Додати з таблиці</button>
+ </div>
+ </div>
  </div>
 
  <!-- Tab Content: Trees Input -->
@@ -500,6 +529,10 @@
  center: "Центр", panorama: "Панорама",
  mode_absolute: "Координати / GPS / Карта", mode_relative: "Від іншого центру",
  linked_from: "від {name} · аз. {az}° · {dist} м",
+ links_title: "Прив'язки центрів", link_from: "Від", link_to: "До", link_az: "Азимут", link_dist: "Відстань",
+ link_add: "Додати", link_paste: "Додати з таблиці", ph_paste_links: "Від, До, Азимут, Відстань — по рядку",
+ link_added: "Прив'язку додано", link_removed: "Прив'язку видалено", link_invalid: "Перевірте дані прив'язки",
+ link_cycle: "Це створить цикл у ланцюжку", links_pasted: "Додано прив'язок: {n}, пропущено: {m}",
  ph_name_center: "Назва (напр. Сектор А)", ph_name_pano: "Назва (напр. Панорама 1)",
  ph_lat: "Широта (Lat)", ph_lon: "Довгота (Lon)", ph_meters: "Метри",
  pick_map: "Вказати точку на карті", pick_cancel: "Скасувати вибір на карті",
@@ -573,6 +606,10 @@
  center: "Centre", panorama: "Panorama",
  mode_absolute: "Coordinates / GPS / Map", mode_relative: "From another centre",
  linked_from: "from {name} · az. {az}° · {dist} m",
+ links_title: "Centre links", link_from: "From", link_to: "To", link_az: "Azimuth", link_dist: "Distance",
+ link_add: "Add", link_paste: "Add from table", ph_paste_links: "From, To, Azimuth, Distance — one per line",
+ link_added: "Link added", link_removed: "Link removed", link_invalid: "Check the link data",
+ link_cycle: "This would create a cycle in the chain", links_pasted: "Links added: {n}, skipped: {m}",
  ph_name_center: "Name (e.g. Sector A)", ph_name_pano: "Name (e.g. Panorama 1)",
  ph_lat: "Latitude (Lat)", ph_lon: "Longitude (Lon)", ph_meters: "Metres",
  pick_map: "Pick a point on the map", pick_cancel: "Cancel map picking",
@@ -680,6 +717,7 @@
  if (cm) cm.value = colorMode;
 
  renderCentersList();
+ renderLinksTable();
  updateDropdowns();
  renderTreeTable();
  updateLegend();
@@ -1064,6 +1102,7 @@
 
  function refreshAllViews() {
  renderCentersList();
+ renderLinksTable();
  updateDropdowns();
  renderTreeTable();
  updateTreeCount();
@@ -1340,6 +1379,7 @@
  clearPickMarker();
 
  renderCentersList();
+ renderLinksTable();
  updateDropdowns();
  map.setView([lat, lon], 19);
  saveToStorage();
@@ -1360,7 +1400,7 @@
  c.marker.setPopupContent(centerPopupHtml(c));
  recomputeTreesForCenter(c);
  propagateCenterMove(c);
- renderCentersList(); renderTreeTable(); updateXYPreview(); saveToStorage();
+ renderCentersList(); renderLinksTable(); renderTreeTable(); updateXYPreview(); saveToStorage();
  showToast(t('center_moved'));
  });
  }
@@ -1964,9 +2004,136 @@
  if (c.marker) { c.marker.setLatLng([lat, lon]); c.marker.setPopupContent(centerPopupHtml(c)); }
  recomputeTreesForCenter(c);
  propagateCenterMove(c);
- renderCentersList(); renderTreeTable(); updateXYPreview(); saveToStorage();
+ renderCentersList(); renderLinksTable(); renderTreeTable(); updateXYPreview(); saveToStorage();
  map.setView([lat, lon], map.getZoom());
  showToast(t('center_moved'));
+ }
+
+ // --- Centre links table: bulk editor over the refId/refAz/refDist chain ---
+ function centerById(id) { return centers.find(x => x.id === id); }
+
+ // True if linking child -> parent would close a loop (child is already an ancestor of parent)
+ function wouldCreateCycle(childId, parentId) {
+ const seen = new Set();
+ let cur = parentId;
+ while (cur && !seen.has(cur)) {
+ if (cur === childId) return true;
+ seen.add(cur);
+ const c = centerById(cur);
+ cur = c ? c.refId : null;
+ }
+ return false;
+ }
+
+ // Recompute one linked center from its parent and shift its subtree
+ function applyLink(child) {
+ const parent = centerById(child.refId);
+ if (!parent) { delete child.refId; delete child.refAz; delete child.refDist; return false; }
+ const pos = calculateDestination(parent.lat, parent.lon, child.refAz, child.refDist);
+ child.lat = pos.lat; child.lon = pos.lon;
+ if (child.marker) { child.marker.setLatLng([child.lat, child.lon]); child.marker.setPopupContent(centerPopupHtml(child)); }
+ recomputeTreesForCenter(child);
+ propagateCenterMove(child);
+ return true;
+ }
+
+ function refreshLinkViews() {
+ renderCentersList(); renderLinksTable(); renderTreeTable(); updateXYPreview(); saveToStorage();
+ }
+
+ // Shared validation + apply for one link. Returns 'ok' or an i18n error key.
+ function setCenterLink(childId, parentId, azRaw, distRaw) {
+ const child = centerById(childId), parent = centerById(parentId);
+ if (!child || !parent) return 'link_invalid';
+ if (childId === parentId) return 'link_invalid';
+ if (wouldCreateCycle(childId, parentId)) return 'link_cycle';
+ const az = ((parseFloat(String(azRaw).replace(',', '.')) % 360) + 360) % 360;
+ const dist = parseFloat(String(distRaw).replace(',', '.'));
+ if (isNaN(az) || isNaN(dist) || dist < 0) return 'link_invalid';
+ child.refId = parentId; child.refAz = az; child.refDist = dist;
+ applyLink(child);
+ return 'ok';
+ }
+
+ window.addLinkFromForm = function() {
+ const from = document.getElementById('newLinkFrom').value;
+ const to = document.getElementById('newLinkTo').value;
+ const az = document.getElementById('newLinkAz').value;
+ const dist = document.getElementById('newLinkDist').value;
+ const res = setCenterLink(to, from, az, dist);
+ if (res !== 'ok') { showToast(t(res)); renderLinksTable(); return; }
+ document.getElementById('newLinkAz').value = '';
+ document.getElementById('newLinkDist').value = '';
+ refreshLinkViews();
+ showToast(t('link_added'));
+ };
+
+ // Edit one field of an existing link row. "До" is the row identity and stays fixed.
+ window.updateLinkRow = function(childId, field, value) {
+ const child = centerById(childId);
+ if (!child) return;
+ let res;
+ if (field === 'from') res = setCenterLink(childId, value, child.refAz, child.refDist);
+ else if (field === 'az') res = setCenterLink(childId, child.refId, value, child.refDist);
+ else if (field === 'dist') res = setCenterLink(childId, child.refId, child.refAz, value);
+ else return;
+ if (res !== 'ok') { showToast(t(res)); renderLinksTable(); return; }
+ refreshLinkViews();
+ };
+
+ window.removeLink = function(childId) {
+ const child = centerById(childId);
+ if (!child) return;
+ delete child.refId; delete child.refAz; delete child.refDist;
+ refreshLinkViews();
+ showToast(t('link_removed'));
+ };
+
+ // Paste rows as "From, To, Azimuth, Distance" (comma, semicolon or tab separated).
+ // Centers are matched by exact name; unmatched or invalid rows are skipped and counted.
+ window.pasteLinks = function() {
+ const area = document.getElementById('pasteLinksArea');
+ const lines = area.value.split(/\r?\n/).map(s => s.trim()).filter(Boolean);
+ let added = 0, skipped = 0;
+ lines.forEach(line => {
+ const parts = line.split(/[\t;,]+/).map(s => s.trim());
+ if (parts.length < 4) { skipped++; return; }
+ const from = centers.find(c => c.name === parts[0]);
+ const to = centers.find(c => c.name === parts[1]);
+ if (!from || !to) { skipped++; return; }
+ if (setCenterLink(to.id, from.id, parts[2], parts[3]) === 'ok') added++;
+ else skipped++;
+ });
+ area.value = '';
+ refreshLinkViews();
+ showToast(t('links_pasted', {n: added, m: skipped}));
+ };
+
+ function renderLinksTable() {
+ const tbody = document.getElementById('linksTableBody');
+ if (!tbody) return;
+ const opts = centers.map(c => `<option value="${c.id}">${c.name}</option>`).join('');
+ const empty = `<option value="">${t('add_center_opt')}</option>`;
+ ['newLinkFrom', 'newLinkTo'].forEach(id => {
+ const el = document.getElementById(id);
+ if (!el) return;
+ const prev = el.value;
+ el.innerHTML = opts || empty;
+ if (prev && centerById(prev)) el.value = prev;
+ });
+ tbody.innerHTML = '';
+ centers.filter(c => c.refId).forEach(c => {
+ const tr = document.createElement('tr');
+ tr.className = "border-b hover:bg-slate-50";
+ tr.innerHTML = `
+ <td class="p-1"><select class="w-full p-1 border rounded bg-white" onchange="updateLinkRow('${c.id}', 'from', this.value)">${centers.map(x => `<option value="${x.id}" ${x.id === c.refId ? 'selected' : ''}>${x.name}</option>`).join('')}</select></td>
+ <td class="p-1 font-medium text-slate-700">${c.name}</td>
+ <td class="p-1"><input type="number" step="any" class="w-20 p-1 border rounded" value="${c.refAz}" onchange="updateLinkRow('${c.id}', 'az', this.value)"></td>
+ <td class="p-1"><input type="number" step="any" class="w-20 p-1 border rounded" value="${c.refDist}" onchange="updateLinkRow('${c.id}', 'dist', this.value)"></td>
+ <td class="p-1 text-right"><button onclick="removeLink('${c.id}')" class="text-slate-300 hover:text-red-500"><i data-lucide="trash" class="w-3 h-3"></i></button></td>`;
+ tbody.appendChild(tr);
+ });
+ if (window.lucide) lucide.createIcons();
  }
 
  const CELL = "w-full bg-transparent px-1 py-0.5 rounded border border-transparent hover:border-slate-200 focus:border-emerald-500 focus:bg-white outline-none";
@@ -2131,7 +2298,7 @@
  });
  }
 
- renderCentersList(); updateDropdowns(); renderTreeTable(); updateLegend(); saveToStorage();
+ renderCentersList(); renderLinksTable(); updateDropdowns(); renderTreeTable(); updateLegend(); saveToStorage();
  }
 
  window.panToPoint = function(id, type) {

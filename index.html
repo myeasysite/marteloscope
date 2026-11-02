@@ -215,7 +215,8 @@
  </div>
  <div class="flex gap-2 mt-2">
  <select id="newLinkFrom" class="flex-1 p-2 border rounded text-sm bg-white"></select>
- <select id="newLinkTo" class="flex-1 p-2 border rounded text-sm bg-white"></select>
+ <input id="newLinkTo" list="centersDatalist" class="flex-1 p-2 border rounded text-sm bg-white" data-i18n-ph="ph_link_to_name" placeholder="Назва центру (напр. 1)">
+ <datalist id="centersDatalist"></datalist>
  <input type="number" id="newLinkAz" step="any" placeholder="0-360" class="w-20 p-2 border rounded text-sm">
  <input type="number" id="newLinkDist" step="any" data-i18n-ph="ph_meters" placeholder="Метри" class="w-20 p-2 border rounded text-sm">
  <button onclick="addLinkFromForm()" class="px-3 py-2 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold rounded shadow-sm" data-i18n="link_add">Додати</button>
@@ -531,6 +532,7 @@
  linked_from: "від {name} · аз. {az}° · {dist} м",
  links_title: "Прив'язки центрів", link_from: "Від", link_to: "До", link_az: "Азимут", link_dist: "Відстань",
  link_add: "Додати", link_paste: "Додати з таблиці", ph_paste_links: "Від, До, Азимут, Відстань — по рядку",
+ ph_link_to_name: "Назва центру (напр. 1)",
  link_added: "Прив'язку додано", link_removed: "Прив'язку видалено", link_invalid: "Перевірте дані прив'язки",
  link_cycle: "Це створить цикл у ланцюжку", links_pasted: "Додано прив'язок: {n}, пропущено: {m}",
  ph_name_center: "Назва (напр. Сектор А)", ph_name_pano: "Назва (напр. Панорама 1)",
@@ -608,6 +610,7 @@
  linked_from: "from {name} · az. {az}° · {dist} m",
  links_title: "Centre links", link_from: "From", link_to: "To", link_az: "Azimuth", link_dist: "Distance",
  link_add: "Add", link_paste: "Add from table", ph_paste_links: "From, To, Azimuth, Distance — one per line",
+ ph_link_to_name: "Centre name (e.g. 1)",
  link_added: "Link added", link_removed: "Link removed", link_invalid: "Check the link data",
  link_cycle: "This would create a cycle in the chain", links_pasted: "Links added: {n}, skipped: {m}",
  ph_name_center: "Name (e.g. Sector A)", ph_name_pano: "Name (e.g. Panorama 1)",
@@ -2012,6 +2015,25 @@
  // --- Centre links table: bulk editor over the refId/refAz/refDist chain ---
  function centerById(id) { return centers.find(x => x.id === id); }
 
+ function uniqueId() {
+ let id;
+ do { id = Date.now().toString() + Math.floor(Math.random() * 1000); }
+ while (centers.find(c => c.id === id) || panoramas.find(p => p.id === id));
+ return id;
+ }
+
+ // Create a missing centre already linked to its parent (position computed from the link)
+ function createLinkedCenter(name, parent, azRaw, distRaw) {
+ const az = ((parseFloat(String(azRaw).replace(',', '.')) % 360) + 360) % 360;
+ const dist = parseFloat(String(distRaw).replace(',', '.'));
+ if (isNaN(az) || isNaN(dist) || dist < 0) return null;
+ const pos = calculateDestination(parent.lat, parent.lon, az, dist);
+ const c = { id: uniqueId(), name, lat: pos.lat, lon: pos.lon, refId: parent.id, refAz: az, refDist: dist };
+ centers.push(c);
+ createCenterMarker(c);
+ return c;
+ }
+
  // True if linking child -> parent would close a loop (child is already an ancestor of parent)
  function wouldCreateCycle(childId, parentId) {
  const seen = new Set();
@@ -2055,13 +2077,55 @@
  return 'ok';
  }
 
+ // Apply link rows in passes, so chains resolve no matter the row order:
+ // a row whose parent is created by another row is retried until no progress
+ // is made. Returns {added, skipped}.
+ function applyLinkRows(rows) {
+ let added = 0, skipped = 0;
+ let pending = rows.slice();
+ let progress = true;
+ while (progress && pending.length > 0) {
+ progress = false;
+ const rest = [];
+ pending.forEach(row => {
+ const from = centers.find(c => c.name === row.fromName);
+ if (!from) { rest.push(row); return; }
+ let to = centers.find(c => c.name === row.toName);
+ if (!to) {
+ to = createLinkedCenter(row.toName, from, row.az, row.dist);
+ if (!to) { skipped++; return; }
+ added++; progress = true; return;
+ }
+ if (setCenterLink(to.id, from.id, row.az, row.dist) === 'ok') { added++; progress = true; }
+ else skipped++;
+ });
+ pending = rest;
+ }
+ skipped += pending.length;
+ return { added, skipped };
+ }
+
  window.addLinkFromForm = function() {
  const from = document.getElementById('newLinkFrom').value;
- const to = document.getElementById('newLinkTo').value;
+ const toName = document.getElementById('newLinkTo').value.trim();
  const az = document.getElementById('newLinkAz').value;
  const dist = document.getElementById('newLinkDist').value;
- const res = setCenterLink(to, from, az, dist);
+ const parent = centerById(from);
+ if (!parent || !toName) { showToast(t('link_invalid')); renderLinksTable(); return; }
+ let to = centers.find(c => c.name === toName);
+ if (!to) {
+ to = createLinkedCenter(toName, parent, az, dist);
+ if (!to) { showToast(t('link_invalid')); renderLinksTable(); return; }
+ document.getElementById('newLinkTo').value = '';
+ document.getElementById('newLinkAz').value = '';
+ document.getElementById('newLinkDist').value = '';
+ refreshLinkViews();
+ showToast(t('link_added'));
+ return;
+ }
+ const res = setCenterLink(to.id, from, az, dist);
  if (res !== 'ok') { showToast(t(res)); renderLinksTable(); return; }
+ document.getElementById('newLinkTo').value = '';
  document.getElementById('newLinkAz').value = '';
  document.getElementById('newLinkDist').value = '';
  refreshLinkViews();
@@ -2090,23 +2154,22 @@
  };
 
  // Paste rows as "From, To, Azimuth, Distance" (comma, semicolon or tab separated).
- // Centers are matched by exact name; unmatched or invalid rows are skipped and counted.
+ // Centres are matched by exact name; a missing "To" centre is created from the
+ // link, so a whole chain can grow from the first centre. Unknown parents and
+ // invalid rows are skipped and counted.
  window.pasteLinks = function() {
  const area = document.getElementById('pasteLinksArea');
- const lines = area.value.split(/\r?\n/).map(s => s.trim()).filter(Boolean);
- let added = 0, skipped = 0;
- lines.forEach(line => {
+ const rows = [];
+ let malformed = 0;
+ area.value.split(/\r?\n/).map(s => s.trim()).filter(Boolean).forEach(line => {
  const parts = line.split(/[\t;,]+/).map(s => s.trim());
- if (parts.length < 4) { skipped++; return; }
- const from = centers.find(c => c.name === parts[0]);
- const to = centers.find(c => c.name === parts[1]);
- if (!from || !to) { skipped++; return; }
- if (setCenterLink(to.id, from.id, parts[2], parts[3]) === 'ok') added++;
- else skipped++;
+ if (parts.length < 4) { malformed++; return; }
+ rows.push({ fromName: parts[0], toName: parts[1], az: parts[2], dist: parts[3] });
  });
+ const res = applyLinkRows(rows);
  area.value = '';
  refreshLinkViews();
- showToast(t('links_pasted', {n: added, m: skipped}));
+ showToast(t('links_pasted', { n: res.added, m: res.skipped + malformed }));
  };
 
  function renderLinksTable() {
@@ -2114,13 +2177,14 @@
  if (!tbody) return;
  const opts = centers.map(c => `<option value="${c.id}">${c.name}</option>`).join('');
  const empty = `<option value="">${t('add_center_opt')}</option>`;
- ['newLinkFrom', 'newLinkTo'].forEach(id => {
- const el = document.getElementById(id);
- if (!el) return;
- const prev = el.value;
- el.innerHTML = opts || empty;
- if (prev && centerById(prev)) el.value = prev;
- });
+ const fromEl = document.getElementById('newLinkFrom');
+ if (fromEl) {
+ const prev = fromEl.value;
+ fromEl.innerHTML = opts || empty;
+ if (prev && centerById(prev)) fromEl.value = prev;
+ }
+ const dl = document.getElementById('centersDatalist');
+ if (dl) dl.innerHTML = centers.map(c => `<option value="${c.name}"></option>`).join('');
  tbody.innerHTML = '';
  centers.filter(c => c.refId).forEach(c => {
  const tr = document.createElement('tr');

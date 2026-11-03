@@ -256,10 +256,27 @@
  <button onclick="document.getElementById('fileUpload').click()" class="flex-1 py-2 border border-slate-300 hover:bg-slate-50 text-slate-600 text-xs rounded flex items-center justify-center gap-1 font-medium">
  <i data-lucide="upload" class="w-3 h-3"></i> <span data-i18n="import_file">Імпорт файлу</span>
  </button>
+ <button onclick="importUnassignedTrees()" class="flex-1 py-2 border border-amber-300 hover:bg-amber-50 text-amber-700 text-xs font-bold rounded flex items-center justify-center gap-1">
+ <i data-lucide="layers" class="w-3 h-3"></i> <span data-i18n="add_unassigned">Додати без центру</span>
+ </button>
  <button onclick="processTrees()" class="flex-1 py-2 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold rounded shadow-sm flex items-center justify-center gap-1">
  <i data-lucide="calculator" class="w-3 h-3"></i> <span data-i18n="calculate">Розрахувати</span>
  </button>
  </div>
+ </div>
+
+ <div id="rangesPanel" class="hidden bg-amber-50 p-4 rounded-lg border border-amber-200 shadow-sm">
+ <div class="flex justify-between items-center mb-1">
+ <label class="block text-xs font-bold text-amber-800 uppercase" data-i18n="ranges_title">Діапазони за центрами</label>
+ <span id="unassignedSummary" class="text-xs text-amber-700 font-bold"></span>
+ </div>
+ <p class="text-[10px] text-amber-700 mb-3" data-i18n="ranges_hint">Дерева без центру: для кожного центру вкажіть діапазон — за номерами дерев або за рядками (рядки рахуються серед дерев без центру, у порядку вставки). Дерева поза діапазонами лишаться без центру.</p>
+ <div id="rangesRows" class="space-y-2"></div>
+ <button onclick="applyAllRanges()" class="mt-3 px-3 py-2 bg-amber-600 hover:bg-amber-700 text-white text-xs font-bold rounded shadow-sm" data-i18n="ranges_apply_all">Призначити всі</button>
+ <details class="mt-3">
+ <summary class="text-[10px] text-amber-700 cursor-pointer font-bold" data-i18n="ranges_order_title">Порядок вставки дерев без центру</summary>
+ <div id="unassignedOrder" class="mt-1 max-h-32 overflow-y-auto text-[10px] font-mono text-amber-800 bg-white/60 p-2 rounded border border-amber-100"></div>
+ </details>
  </div>
  </div>
 
@@ -569,6 +586,21 @@
  center_added: "Центр додано", pano_added: "Панораму додано",
  center_moved: "Центр переміщено, дерева перераховано", pano_moved: "Панораму переміщено",
  select_center_and_data: "Оберіть центр та введіть дані", trees_added: "Додано {n} дерев",
+ add_unassigned: "Додати без центру",
+ ranges_title: "Діапазони за центрами",
+ ranges_hint: "Дерева без центру: для кожного центру вкажіть діапазон — за номерами дерев або за рядками (рядки рахуються серед дерев без центру, у порядку вставки). Дерева поза діапазонами лишаться без центру.",
+ ranges_unassigned: "Без центру: {n}",
+ ranges_mode_num: "За номерами",
+ ranges_mode_row: "За рядками",
+ ranges_apply: "Призначити",
+ ranges_apply_all: "Призначити всі",
+ ranges_assigned: "Призначено {n} дерев, без центру лишилось {m}",
+ ranges_conflict: "Перетин діапазонів: дерево №{num} потрапляє і в «{a}», і в «{b}». Нічого не призначено.",
+ ranges_no_data: "Вставте дані дерев",
+ ranges_empty_range: "Вкажіть діапазон від–до",
+ ranges_order_title: "Порядок вставки дерев без центру",
+ ranges_from: "від",
+ ranges_to: "до",
  tree_deleted: "Дерево видалено", confirm_delete_point: "Видалити точку?",
  no_data: "Немає даних", no_centers: "Немає центрів", no_panoramas: "Немає панорам",
  id_copied: "ID {id} скопійовано!", autofill_found: "Автоматично знайдено {n} ID",
@@ -647,6 +679,21 @@
  center_added: "Centre added", pano_added: "Panorama added",
  center_moved: "Centre moved, trees recalculated", pano_moved: "Panorama moved",
  select_center_and_data: "Choose a centre and enter data", trees_added: "{n} trees added",
+ add_unassigned: "Add without centre",
+ ranges_title: "Centre ranges",
+ ranges_hint: "Unassigned trees: set a range for each centre — by tree numbers or by rows (rows count among unassigned trees, in insertion order). Trees outside all ranges stay unassigned.",
+ ranges_unassigned: "Unassigned: {n}",
+ ranges_mode_num: "By numbers",
+ ranges_mode_row: "By rows",
+ ranges_apply: "Assign",
+ ranges_apply_all: "Assign all",
+ ranges_assigned: "{n} trees assigned, {m} still unassigned",
+ ranges_conflict: "Range overlap: tree No. {num} falls into both «{a}» and «{b}». Nothing assigned.",
+ ranges_no_data: "Paste tree data",
+ ranges_empty_range: "Enter a from–to range",
+ ranges_order_title: "Insertion order of unassigned trees",
+ ranges_from: "from",
+ ranges_to: "to",
  tree_deleted: "Tree deleted", confirm_delete_point: "Delete this point?",
  no_data: "No data", no_centers: "No centres", no_panoramas: "No panoramas",
  id_copied: "ID {id} copied!", autofill_found: "{n} IDs matched automatically",
@@ -726,6 +773,7 @@
  updateLegend();
  updateSylvoUI();
  updateXYPreview();
+ renderRangesPanel();
 
  if (window.lucide) lucide.createIcons();
  }
@@ -1079,7 +1127,8 @@
  (data.trees || []).forEach(t => {
  const treeObj = { ...t, marker: null, line: null };
  trees.push(treeObj);
- createTreeMarker(treeObj);
+ // Trees without a centre have no coordinates yet — no marker until assigned
+ if (treeObj.lat != null && treeObj.lon != null) createTreeMarker(treeObj);
  });
 
  if (data.speciesIdMap) speciesIdMap = data.speciesIdMap;
@@ -1089,6 +1138,7 @@
  map.setView([last.lat, last.lon], 18);
  }
  updateTreeCount();
+ renderRangesPanel();
  }
 
  // Wipe every layer and reset in-memory state (does not touch localStorage)
@@ -1111,6 +1161,7 @@
  updateTreeCount();
  updateLegend();
  updateXYPreview();
+ renderRangesPanel();
  }
 
  // --- Clear all trees (points stay) ---
@@ -1129,6 +1180,7 @@
  updateTreeCount();
  updateLegend();
  updateXYPreview();
+ renderRangesPanel();
  saveToStorage();
  showToast(t('trees_removed', {n: removed}));
  }
@@ -1437,16 +1489,10 @@
  }
 
  // --- Tree Management ---
- window.processTrees = function() {
- const centerId = document.getElementById('activeCenterSelect').value;
- const text = document.getElementById('csvInput').value;
- if (!centerId || !text.trim()) { showToast(t('select_center_and_data')); return; }
-
- const center = centers.find(c => c.id === centerId);
- const lines = text.split(/\r?\n/);
- let count = 0;
-
- lines.forEach(line => {
+ // Shared CSV parser for tree rows: Number, Azimuth, Distance, Species, DBH, Height
+ function parseTreeLines(text) {
+ const rows = [];
+ text.split(/\r?\n/).forEach(line => {
  if (!line.trim()) return;
  const p = line.split(/[,;\t]+/).map(s => s.trim());
  if (p.length < 3) return;
@@ -1459,12 +1505,26 @@
  const height = parseFloat(p[5]) || 0;
 
  if (isNaN(az) || isNaN(dist)) return;
+ rows.push({num, az, dist, species, dbh, height});
+ });
+ return rows;
+ }
 
- const coords = calculateDestination(center.lat, center.lon, az, dist);
+ window.processTrees = function() {
+ const centerId = document.getElementById('activeCenterSelect').value;
+ const text = document.getElementById('csvInput').value;
+ if (!centerId || !text.trim()) { showToast(t('select_center_and_data')); return; }
+
+ const center = centers.find(c => c.id === centerId);
+ const parsed = parseTreeLines(text);
+ let count = 0;
+
+ parsed.forEach(row => {
+ const coords = calculateDestination(center.lat, center.lon, row.az, row.dist);
 
  const treeObj = {
  id: Date.now() + Math.random(),
- centerId, num, az, dist, species, dbh, height,
+ centerId, num: row.num, az: row.az, dist: row.dist, species: row.species, dbh: row.dbh, height: row.height,
  lat: coords.lat, lon: coords.lon
  };
 
@@ -1487,7 +1547,175 @@
  }
  }
 
+ // Bulk import: all trees at once, without a centre. Centres are assigned
+ // afterwards via ranges (see renderRangesPanel / applyRanges below).
+ window.importUnassignedTrees = function() {
+ const text = document.getElementById('csvInput').value;
+ if (!text.trim()) { showToast(t('ranges_no_data')); return; }
+
+ const parsed = parseTreeLines(text);
+ parsed.forEach(row => {
+ trees.push({
+ id: Date.now() + Math.random(),
+ centerId: null, num: row.num, az: row.az, dist: row.dist,
+ species: row.species, dbh: row.dbh, height: row.height,
+ lat: null, lon: null, marker: null, line: null
+ });
+ });
+
+ if (parsed.length > 0) {
+ showToast(t('trees_added', {n: parsed.length}));
+ document.getElementById('csvInput').value = "";
+ updateTreeCount();
+ renderTreeTable();
+ renderRangesPanel();
+ updateLegend();
+ saveToStorage();
+ }
+ }
+
+ function getUnassignedTrees() {
+ return trees.filter(t => !t.centerId);
+ }
+
+ // One range row per centre: mode (by tree number / by row), from, to.
+ // Row numbers count among unassigned trees, in insertion order.
+ window.renderRangesPanel = function() {
+ const panel = document.getElementById('rangesPanel');
+ if (!panel) return;
+ const unassigned = getUnassignedTrees();
+
+ // Keep what the user already typed when the panel re-renders
+ const prev = {};
+ panel.querySelectorAll('[data-range-row]').forEach(row => {
+ prev[row.getAttribute('data-range-row')] = {
+ mode: row.querySelector('[data-range-mode]').value,
+ from: row.querySelector('[data-range-from]').value,
+ to: row.querySelector('[data-range-to]').value
+ };
+ });
+
+ if (unassigned.length === 0) { panel.classList.add('hidden'); return; }
+ panel.classList.remove('hidden');
+ document.getElementById('unassignedSummary').innerText = t('ranges_unassigned', {n: unassigned.length});
+ document.getElementById('unassignedOrder').innerText = unassigned.map((tr, i) => `${i + 1} → №${tr.num}`).join(', ');
+
+ const rowsEl = document.getElementById('rangesRows');
+ if (centers.length === 0) {
+ rowsEl.innerHTML = `<p class="text-[10px] text-amber-700 italic">${t('no_centers')}</p>`;
+ return;
+ }
+ rowsEl.innerHTML = centers.map(c => {
+ const p = prev[c.id] || {};
+ return `<div class="flex items-center gap-2" data-range-row="${c.id}">
+ <span class="text-xs font-bold text-amber-900 w-24 truncate" title="${c.name}">${c.name}</span>
+ <select data-range-mode class="p-1.5 border border-amber-300 rounded text-xs bg-white">
+ <option value="num" ${p.mode !== 'row' ? 'selected' : ''}>${t('ranges_mode_num')}</option>
+ <option value="row" ${p.mode === 'row' ? 'selected' : ''}>${t('ranges_mode_row')}</option>
+ </select>
+ <input data-range-from type="number" step="any" value="${p.from || ''}" placeholder="${t('ranges_from')}" class="w-20 p-1.5 border border-amber-300 rounded text-xs">
+ <input data-range-to type="number" step="any" value="${p.to || ''}" placeholder="${t('ranges_to')}" class="w-20 p-1.5 border border-amber-300 rounded text-xs">
+ <button onclick="applyRangeForCenter('${c.id}')" class="px-2 py-1.5 bg-amber-100 hover:bg-amber-200 text-amber-800 text-xs font-bold rounded">${t('ranges_apply')}</button>
+ </div>`;
+ }).join('');
+ }
+
+ // null = row left empty (skipped); {invalid: true} = half-filled or from > to
+ function readRangeRow(rowEl) {
+ const mode = rowEl.querySelector('[data-range-mode]').value;
+ const fromRaw = rowEl.querySelector('[data-range-from]').value;
+ const toRaw = rowEl.querySelector('[data-range-to]').value;
+ if (!fromRaw.trim() && !toRaw.trim()) return null;
+ const from = parseFloat(String(fromRaw).replace(',', '.'));
+ const to = parseFloat(String(toRaw).replace(',', '.'));
+ if (isNaN(from) || isNaN(to) || from > to) return {invalid: true};
+ return {centerId: rowEl.getAttribute('data-range-row'), mode, from, to};
+ }
+
+ window.applyRangeForCenter = function(centerId) {
+ const rowEl = document.querySelector(`[data-range-row="${centerId}"]`);
+ if (!rowEl) return;
+ const range = readRangeRow(rowEl);
+ if (!range || range.invalid) { showToast(t('ranges_empty_range')); return; }
+ applyRanges([range]);
+ }
+
+ window.applyAllRanges = function() {
+ const ranges = [];
+ let bad = false;
+ document.querySelectorAll('[data-range-row]').forEach(rowEl => {
+ const range = readRangeRow(rowEl);
+ if (range && range.invalid) bad = true;
+ else if (range) ranges.push(range);
+ });
+ if (bad || ranges.length === 0) { showToast(t('ranges_empty_range')); return; }
+ applyRanges(ranges);
+ }
+
+ // Builds the full assignment first: any tree claimed by two different
+ // centres aborts the whole batch, so nothing lands on the wrong centre.
+ function applyRanges(ranges) {
+ const unassigned = getUnassignedTrees();
+ const claims = new Map(); // treeId -> {centerId, centerName}
+ let conflict = null;
+
+ ranges.forEach(range => {
+ const center = centers.find(c => c.id === range.centerId);
+ if (!center) return;
+ let matched = [];
+ if (range.mode === 'row') {
+ const fromIdx = Math.max(1, Math.floor(range.from)) - 1;
+ const toIdx = Math.min(unassigned.length, Math.floor(range.to)) - 1;
+ for (let i = fromIdx; i <= toIdx; i++) matched.push(unassigned[i]);
+ } else {
+ matched = unassigned.filter(tr => {
+ const n = parseFloat(tr.num);
+ return !isNaN(n) && n >= range.from && n <= range.to;
+ });
+ }
+ matched.forEach(tr => {
+ if (conflict) return;
+ const prev = claims.get(tr.id);
+ if (prev && prev.centerId !== range.centerId) {
+ conflict = {num: tr.num, a: prev.centerName, b: center.name};
+ } else {
+ claims.set(tr.id, {centerId: range.centerId, centerName: center.name});
+ }
+ });
+ });
+
+ if (conflict) {
+ showToast(t('ranges_conflict', {num: conflict.num, a: conflict.a, b: conflict.b}));
+ return;
+ }
+
+ const assigned = [];
+ claims.forEach((claim, treeId) => {
+ const tr = trees.find(x => x.id === treeId);
+ const center = centers.find(c => c.id === claim.centerId);
+ if (!tr || !center) return;
+ const coords = calculateDestination(center.lat, center.lon, tr.az, tr.dist);
+ tr.centerId = center.id;
+ tr.lat = coords.lat; tr.lon = coords.lon;
+ createTreeMarker(tr);
+ assigned.push(tr);
+ });
+
+ if (assigned.length > 0) {
+ updateTreeCount();
+ renderTreeTable();
+ renderRangesPanel();
+ updateLegend();
+ saveToStorage();
+ const bounds = L.latLngBounds(assigned.map(tr => tr.marker.getLatLng()));
+ map.fitBounds(bounds, {padding: [50, 50]});
+ }
+ showToast(t('ranges_assigned', {n: assigned.length, m: getUnassignedTrees().length}));
+ }
+
  function createTreeMarker(tr) {
+ // Unassigned trees have no coordinates yet
+ if (tr.lat == null || tr.lon == null) return;
  const color = getTreeColor(tr);
  const radius = getMarkerRadius(tr.dbh);
 
@@ -1547,6 +1775,7 @@
  renderTreeTable();
  updateTreeCount();
  updateLegend();
+ renderRangesPanel();
  saveToStorage();
  showToast(t('tree_deleted'));
  }
@@ -1645,8 +1874,9 @@
  pts.push({ x: r.x, y: r.y, color: '#9333ea', type: 'panorama', name: p.name });
  });
 
- // Add Trees
+ // Add Trees (skip unassigned ones — they have no coordinates yet)
  trees.forEach(t => {
+ if (t.lat == null || t.lon == null) return;
  const m = latLonToMeters(t.lat, t.lon, origin.lat, origin.lon);
  const r = rotatePoint(m.x, m.y, rot);
  pts.push({ x: r.x, y: r.y, color: getTreeColor(t), type: 'tree' });
@@ -2214,7 +2444,9 @@
  const cName = centers.find(c => c.id === item.centerId)?.name || '???';
  const row = document.createElement('tr');
  row.className = "hover:bg-slate-50 transition";
- row.title = `${cName} · ${item.lat.toFixed(6)}, ${item.lon.toFixed(6)}`;
+ row.title = item.lat != null
+ ? `${cName} · ${item.lat.toFixed(6)}, ${item.lon.toFixed(6)}`
+ : `${cName} · ???`;
  row.innerHTML = `
  <td class="p-1 border-b"><input class="${CELL} font-mono text-slate-700 w-9" value="${item.num}" onchange="updateTreeField('${item.id}','num',this.value)"></td>
  <td class="p-1 border-b"><input class="${CELL} text-slate-800 font-medium" value="${(item.species || '').replace(/"/g,'&quot;')}" onchange="updateTreeField('${item.id}','species',this.value)"></td>
@@ -2362,7 +2594,7 @@
  });
  }
 
- renderCentersList(); renderLinksTable(); updateDropdowns(); renderTreeTable(); updateLegend(); saveToStorage();
+ renderCentersList(); renderLinksTable(); updateDropdowns(); renderTreeTable(); updateLegend(); renderRangesPanel(); saveToStorage();
  }
 
  window.panToPoint = function(id, type) {
@@ -2375,9 +2607,9 @@
 
  window.zoomToTree = function(id) {
  const t = trees.find(x => x.id == id);
- if(t) {
+ if (t && t.lat != null && t.lon != null) {
  map.setView([t.lat, t.lon], 21);
- t.marker.openPopup();
+ if (t.marker) t.marker.openPopup();
  }
  }
 

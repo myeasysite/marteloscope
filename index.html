@@ -61,7 +61,7 @@
 <body class="bg-slate-100 text-slate-800 h-screen flex flex-col overflow-hidden">
 
  <!-- Header -->
- <header class="bg-emerald-900 text-white p-3 shadow-lg shrink-0 z-20 flex justify-between items-center">
+ <header class="bg-emerald-900 text-white p-3 shadow-lg shrink-0 z-20 flex justify-between items-center flex-wrap gap-2">
  <div class="flex items-center gap-2 px-2">
  <i data-lucide="tree-deciduous" class="w-6 h-6 text-emerald-400"></i>
  <div>
@@ -87,11 +87,11 @@
  </div>
  </header>
 
- <!-- Main Layout -->
- <div class="flex flex-grow overflow-hidden">
+ <!-- Main Layout: stacked on phones (panel above map), side-by-side on desktop -->
+ <div class="flex flex-col md:flex-row flex-grow overflow-hidden">
 
  <!-- Sidebar (Controls) -->
- <aside class="w-full md:w-[480px] bg-white shadow-xl z-10 flex flex-col overflow-hidden border-r border-slate-200">
+ <aside class="w-full md:w-[480px] h-[52vh] md:h-auto shrink-0 bg-white shadow-xl z-10 flex flex-col overflow-hidden border-b md:border-b-0 md:border-r border-slate-200">
 
  <!-- Tabs Navigation -->
  <div class="flex border-b border-slate-200 shrink-0 bg-slate-50 overflow-x-auto">
@@ -420,7 +420,7 @@
  </aside>
 
  <!-- Map Area -->
- <main class="flex-grow relative bg-slate-200">
+ <main class="flex-grow relative bg-slate-200 min-h-0">
  <div id="map" class="h-full w-full"></div>
 
  <!-- Picking mode banner -->

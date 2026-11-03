@@ -246,7 +246,7 @@
 
  <div class="mb-3 flex-grow">
  <div class="bg-slate-100 text-[10px] p-2 rounded mb-2 text-slate-600 border border-slate-200 font-mono">
- <span data-i18n="csv_format">Формат: Номер, Азимут, Відстань, Порода, Діаметр (см), Висота (м)</span>
+ <span data-i18n="csv_format">Формат: Номер, Азимут, Відстань, Порода, Діаметр (см), Висота (м), Сектор (необов'язково)</span>
  </div>
  <textarea id="csvInput" class="w-full h-40 p-2 text-xs font-mono border border-slate-300 rounded focus:ring-2 focus:ring-emerald-500 outline-none resize-none" placeholder="1, 45, 12.5, Сосна, 32, 24&#10;2, 120, 8.3, Дуб, 44, 21&#10;3, 270, 15.0, Береза, 28, 19"></textarea>
  </div>
@@ -563,7 +563,7 @@
  azimuth: "Азимут (°)", distance: "Відстань (м)", hint_zero: "Для збігу точок введіть відстань 0",
  points_list: "Список точок", add_centers_first: "Спочатку додайте центри...", add_center_opt: "Додайте центр",
  active_center: "Робочий центр", tree_data_csv: "Дані дерев (CSV)", insert_sample: "Вставити приклад",
- csv_format: "Формат: Номер, Азимут, Відстань, Порода, Діаметр (см), Висота (м)",
+ csv_format: "Формат: Номер, Азимут, Відстань, Порода, Діаметр (см), Висота (м), Сектор (необов'язково)",
  import_file: "Імпорт файлу", calculate: "Розрахувати",
  tree_list: "Список дерев", total: "Всього:", clear_list: "Очистити список",
  clear_list_title: "Видалити всі дерева (точки залишаться)",
@@ -601,6 +601,7 @@
  ranges_order_title: "Порядок вставки дерев без центру",
  ranges_from: "від",
  ranges_to: "до",
+ sector_unknown: "Сектор «{s}» не знайдено: {n} дерев без центру",
  tree_deleted: "Дерево видалено", confirm_delete_point: "Видалити точку?",
  no_data: "Немає даних", no_centers: "Немає центрів", no_panoramas: "Немає панорам",
  id_copied: "ID {id} скопійовано!", autofill_found: "Автоматично знайдено {n} ID",
@@ -656,7 +657,7 @@
  azimuth: "Azimuth (°)", distance: "Distance (m)", hint_zero: "Enter distance 0 for coincident points",
  points_list: "Point list", add_centers_first: "Add centres first...", add_center_opt: "Add a centre",
  active_center: "Working centre", tree_data_csv: "Tree data (CSV)", insert_sample: "Insert sample",
- csv_format: "Format: Number, Azimuth, Distance, Species, Diameter (cm), Height (m)",
+ csv_format: "Format: Number, Azimuth, Distance, Species, Diameter (cm), Height (m), Sector (optional)",
  import_file: "Import file", calculate: "Calculate",
  tree_list: "Tree list", total: "Total:", clear_list: "Clear list",
  clear_list_title: "Delete all trees (points are kept)",
@@ -694,6 +695,7 @@
  ranges_order_title: "Insertion order of unassigned trees",
  ranges_from: "from",
  ranges_to: "to",
+ sector_unknown: "Sector «{s}» not found: {n} trees left unassigned",
  tree_deleted: "Tree deleted", confirm_delete_point: "Delete this point?",
  no_data: "No data", no_centers: "No centres", no_panoramas: "No panoramas",
  id_copied: "ID {id} copied!", autofill_found: "{n} IDs matched automatically",
@@ -1503,11 +1505,46 @@
  const species = p[3] || (lang === 'uk' ? "Невідомо" : "Unknown");
  const dbh = parseFloat(p[4]) || 0;
  const height = parseFloat(p[5]) || 0;
+ const sector = p[6] ? p[6].trim() : '';
 
  if (isNaN(az) || isNaN(dist)) return;
- rows.push({num, az, dist, species, dbh, height});
+ rows.push({num, az, dist, species, dbh, height, sector});
  });
  return rows;
+ }
+
+ // Sector column (optional 7th CSV column) names the centre a tree was
+ // measured from. Exact name match after trim, case-insensitive fallback.
+ function findCenterBySector(sector) {
+ const s = String(sector).trim();
+ if (!s) return null;
+ return centers.find(c => c.name === s)
+ || centers.find(c => c.name.toLowerCase() === s.toLowerCase())
+ || null;
+ }
+
+ // Resolves a parsed row to a centre:
+ // - sector given and found -> that centre (beats the fallback)
+ // - sector given but unknown -> unassigned + unknown flag (never misplaced)
+ // - no sector -> the fallback (active centre, or unassigned when null)
+ function resolveRowCenter(row, fallbackCenter) {
+ if (row.sector) {
+ const found = findCenterBySector(row.sector);
+ if (found) return {center: found};
+ return {center: null, unknown: row.sector};
+ }
+ return {center: fallbackCenter || null};
+ }
+
+ // Combined import toast: added count + unknown sectors, if any
+ function importToast(count, unknown) {
+ let msg = t('trees_added', {n: count});
+ const names = Object.keys(unknown);
+ if (names.length > 0) {
+ const total = names.reduce((sum, s) => sum + unknown[s], 0);
+ msg += ' ' + t('sector_unknown', {s: names.join(', '), n: total});
+ }
+ return msg;
  }
 
  window.processTrees = function() {
@@ -1515,62 +1552,86 @@
  const text = document.getElementById('csvInput').value;
  if (!centerId || !text.trim()) { showToast(t('select_center_and_data')); return; }
 
- const center = centers.find(c => c.id === centerId);
+ const activeCenter = centers.find(c => c.id === centerId);
  const parsed = parseTreeLines(text);
- let count = 0;
+ const unknown = {}; // sector -> count
+ const added = [];
 
  parsed.forEach(row => {
- const coords = calculateDestination(center.lat, center.lon, row.az, row.dist);
-
+ const res = resolveRowCenter(row, activeCenter);
+ if (res.unknown) unknown[res.unknown] = (unknown[res.unknown] || 0) + 1;
  const treeObj = {
  id: Date.now() + Math.random(),
- centerId, num: row.num, az: row.az, dist: row.dist, species: row.species, dbh: row.dbh, height: row.height,
- lat: coords.lat, lon: coords.lon
- };
-
- trees.push(treeObj);
- createTreeMarker(treeObj);
- count++;
- });
-
- if (count > 0) {
- showToast(t('trees_added', {n: count}));
- document.getElementById('csvInput').value = "";
- updateTreeCount();
- renderTreeTable();
- updateLegend();
- saveToStorage();
-
- const bounds = L.latLngBounds([center.marker.getLatLng()]);
- trees.filter(t => t.centerId === centerId).forEach(t => bounds.extend(t.marker.getLatLng()));
- map.fitBounds(bounds, {padding: [50, 50]});
- }
- }
-
- // Bulk import: all trees at once, without a centre. Centres are assigned
- // afterwards via ranges (see renderRangesPanel / applyRanges below).
- window.importUnassignedTrees = function() {
- const text = document.getElementById('csvInput').value;
- if (!text.trim()) { showToast(t('ranges_no_data')); return; }
-
- const parsed = parseTreeLines(text);
- parsed.forEach(row => {
- trees.push({
- id: Date.now() + Math.random(),
- centerId: null, num: row.num, az: row.az, dist: row.dist,
- species: row.species, dbh: row.dbh, height: row.height,
+ centerId: res.center ? res.center.id : null,
+ num: row.num, az: row.az, dist: row.dist, species: row.species, dbh: row.dbh, height: row.height,
  lat: null, lon: null, marker: null, line: null
- });
+ };
+ if (res.center) {
+ const coords = calculateDestination(res.center.lat, res.center.lon, row.az, row.dist);
+ treeObj.lat = coords.lat; treeObj.lon = coords.lon;
+ }
+ trees.push(treeObj);
+ if (res.center) { createTreeMarker(treeObj); added.push(treeObj); }
  });
 
  if (parsed.length > 0) {
- showToast(t('trees_added', {n: parsed.length}));
+ showToast(importToast(parsed.length, unknown));
  document.getElementById('csvInput').value = "";
  updateTreeCount();
  renderTreeTable();
  renderRangesPanel();
  updateLegend();
  saveToStorage();
+
+ if (added.length > 0) {
+ const bounds = L.latLngBounds([activeCenter.marker.getLatLng()]);
+ added.forEach(tr => bounds.extend(tr.marker.getLatLng()));
+ map.fitBounds(bounds, {padding: [50, 50]});
+ }
+ }
+ }
+
+ // Bulk import: all trees at once. Rows with a sector column are assigned
+ // to the matching centre immediately; the rest stay unassigned until
+ // assigned via ranges (see renderRangesPanel / applyRanges below).
+ window.importUnassignedTrees = function() {
+ const text = document.getElementById('csvInput').value;
+ if (!text.trim()) { showToast(t('ranges_no_data')); return; }
+
+ const parsed = parseTreeLines(text);
+ const unknown = {};
+ const added = [];
+
+ parsed.forEach(row => {
+ const res = resolveRowCenter(row, null);
+ if (res.unknown) unknown[res.unknown] = (unknown[res.unknown] || 0) + 1;
+ const treeObj = {
+ id: Date.now() + Math.random(),
+ centerId: res.center ? res.center.id : null,
+ num: row.num, az: row.az, dist: row.dist,
+ species: row.species, dbh: row.dbh, height: row.height,
+ lat: null, lon: null, marker: null, line: null
+ };
+ if (res.center) {
+ const coords = calculateDestination(res.center.lat, res.center.lon, row.az, row.dist);
+ treeObj.lat = coords.lat; treeObj.lon = coords.lon;
+ }
+ trees.push(treeObj);
+ if (res.center) { createTreeMarker(treeObj); added.push(treeObj); }
+ });
+
+ if (parsed.length > 0) {
+ showToast(importToast(parsed.length, unknown));
+ document.getElementById('csvInput').value = "";
+ updateTreeCount();
+ renderTreeTable();
+ renderRangesPanel();
+ updateLegend();
+ saveToStorage();
+ if (added.length > 0) {
+ const bounds = L.latLngBounds(added.map(tr => tr.marker.getLatLng()));
+ map.fitBounds(bounds, {padding: [50, 50]});
+ }
  }
  }
 

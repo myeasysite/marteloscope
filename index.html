@@ -388,7 +388,7 @@
  <div class="bg-white p-3 rounded border border-indigo-100 shadow-sm mb-4">
  <label class="block text-[10px] font-bold text-slate-500 uppercase mb-1" data-i18n="sylvo_search">Пошук ID (Довідник)</label>
  <div class="relative">
- <input type="text" data-i18n-ph="ph_sylvo_search" placeholder="Почніть вводити назву (напр. Береза)..."
+ <input type="text" data-i18n-ph="ph_sylvo_search" placeholder="Почніть вводити назву або скорочення (напр. Береза, Бп)..."
  class="w-full p-2 text-xs border border-indigo-200 rounded focus:ring-1 focus:ring-indigo-500 outline-none"
  oninput="searchSylvoId(this.value)">
  <div id="sylvoSearchResults" class="absolute left-0 right-0 top-full mt-1 bg-white border border-indigo-100 rounded shadow-lg max-h-40 overflow-y-auto z-10 hidden">
@@ -574,7 +574,7 @@
  download_xy: "Завантажити X/Y (.csv)", export_centers: "Експорт Центрів", export_panoramas: "Експорт Панорам",
  sylvo_title: "Експорт Sylvotech",
  sylvo_desc: "Вкажіть числові ID для кожної породи. Координати будуть взяті з поворотом, вказаним у вкладці 4.",
- sylvo_search: "Пошук ID (Довідник)", ph_sylvo_search: "Почніть вводити назву (напр. Береза)...",
+ sylvo_search: "Пошук ID (Довідник)", ph_sylvo_search: "Почніть вводити назву або скорочення (напр. Береза, Бп)...",
  autofill: "Спроба автозаповнення", no_species: "Немає порід для відображення",
  download_sylvo: "Завантажити Sylvotech.csv",
  autosave_on: "Автозбереження активне", saved: "Збережено", save_unavailable: "Збереження недоступне",
@@ -668,7 +668,7 @@
  download_xy: "Download X/Y (.csv)", export_centers: "Export centres", export_panoramas: "Export panoramas",
  sylvo_title: "Sylvotech export",
  sylvo_desc: "Set a numeric ID for every species. Coordinates use the rotation defined on tab 4.",
- sylvo_search: "ID lookup (reference list)", ph_sylvo_search: "Start typing a name (e.g. Birch)...",
+ sylvo_search: "ID lookup (reference list)", ph_sylvo_search: "Start typing a name or abbreviation (e.g. Birch, Бп)...",
  autofill: "Try auto-fill", no_species: "No species to show",
  download_sylvo: "Download Sylvotech.csv",
  autosave_on: "Autosave active", saved: "Saved", save_unavailable: "Saving unavailable",
@@ -783,25 +783,25 @@
 
  // Sylvo Database
  const sylvoSpeciesDB = [
- {id: 12, name: "Береза повисла"}, {id: 40, name: "Берека"}, {id: 66, name: "Берест"},
- {id: 57, name: "Бук звичайний (лісовий)"}, {id: 19, name: "Бук лісовий"}, {id: 36, name: "Верба"},
- {id: 54, name: "Верба козяча"}, {id: 25, name: "Вільха"}, {id: 37, name: "Вільха сіра"},
- {id: 14, name: "Вільха чорна"}, {id: 17, name: "В'яз"}, {id: 65, name: "В'яз гладкий"},
- {id: 47, name: "Гіркокаштан звичайний"}, {id: 41, name: "Горіх волоський"}, {id: 38, name: "Горобина звичайна"},
- {id: 10, name: "Горобина круглолиста"}, {id: 16, name: "Граб звичайний"}, {id: 64, name: "Груша звичайна"},
- {id: 15, name: "Дуб"}, {id: 32, name: "Дуб пухнастий"}, {id: 33, name: "Дуб скельний"},
- {id: 34, name: "Дуб червоний"}, {id: 45, name: "Інші листяні породи"},
- {id: 46, name: "Інші хвойні породи"}, {id: 13, name: "Каштан їстівний"}, {id: 23, name: "Клен"},
- {id: 31, name: "Клен гостролистий"}, {id: 24, name: "Клен калинолистий"}, {id: 9, name: "Клен польовий"},
- {id: 20, name: "Клен-явір"}, {id: 21, name: "Криптомерія японська"}, {id: 8, name: "Липа"}, {id: 48, name: "Липа серцелиста"},
- {id: 49, name: "Липа широколиста"}, {id: 59, name: "Ліщина ведмежа"}, {id: 55, name: "Ліщина звичайна"},
- {id: 3, name: "Модрина європейська"}, {id: 30, name: "Осика"}, {id: 62, name: "Падуб звичайний"},
- {id: 5, name: "Псевдотсуга Мензіса (дугласія)"}, {id: 39, name: "Робінія звичайна"}, {id: 42, name: "Сосна Веймутова"},
- {id: 28, name: "Сосна гірська"}, {id: 4, name: "Сосна звичайна"}, {id: 29, name: "Сосна кедрова європейська"},
- {id: 52, name: "Сосна чорна"}, {id: 6, name: "Тис ягідний"}, {id: 61, name: "Тополя біла"},
- {id: 22, name: "Туя"}, {id: 35, name: "Хмелеграб звичайний"}, {id: 60, name: "Черемха звичайна"}, {id: 56, name: "Черемха пізня"},
- {id: 11, name: "Черешня"}, {id: 63, name: "Яблуня лісова"}, {id: 1, name: "Ялина колюча"},
- {id: 50, name: "Ялиця (екзотична)"}, {id: 2, name: "Ялиця біла"}, {id: 53, name: "Ясен білоцвітий"}, {id: 7, name: "Ясен звичайний"}
+ {id: 12, name: "Береза повисла", abbr: "Бп"}, {id: 40, name: "Берека", abbr: "Бер"}, {id: 66, name: "Берест", abbr: "Брс"},
+ {id: 57, name: "Бук звичайний (лісовий)", abbr: "Бкл"}, {id: 19, name: "Бук лісовий", abbr: "Бкл"}, {id: 36, name: "Верба", abbr: "Вр"},
+ {id: 54, name: "Верба козяча", abbr: "Врк"}, {id: 25, name: "Вільха", abbr: "Вл"}, {id: 37, name: "Вільха сіра", abbr: "Влс"},
+ {id: 14, name: "Вільха чорна", abbr: "Влч"}, {id: 17, name: "В'яз", abbr: "Вз"}, {id: 65, name: "В'яз гладкий", abbr: "Вгл"},
+ {id: 47, name: "Гіркокаштан звичайний", abbr: "Гкз"}, {id: 41, name: "Горіх волоський", abbr: "Гхг"}, {id: 38, name: "Горобина звичайна", abbr: "Грз"},
+ {id: 10, name: "Горобина круглолиста", abbr: "Грк"}, {id: 16, name: "Граб звичайний", abbr: "Гз"}, {id: 64, name: "Груша звичайна", abbr: "Гшз"},
+ {id: 15, name: "Дуб", abbr: "Д"}, {id: 32, name: "Дуб пухнастий", abbr: "Дпх"}, {id: 33, name: "Дуб скельний", abbr: "Дс"},
+ {id: 34, name: "Дуб червоний", abbr: "Дчр"}, {id: 45, name: "Інші листяні породи", abbr: "Інл"},
+ {id: 46, name: "Інші хвойні породи", abbr: "Інх"}, {id: 13, name: "Каштан їстівний", abbr: "Кші"}, {id: 23, name: "Клен", abbr: "Кл"},
+ {id: 31, name: "Клен гостролистий", abbr: "Клг"}, {id: 24, name: "Клен калинолистий", abbr: "Клк"}, {id: 9, name: "Клен польовий", abbr: "Клп"},
+ {id: 20, name: "Клен-явір", abbr: "Яв"}, {id: 21, name: "Криптомерія японська", abbr: "Кря"}, {id: 8, name: "Липа", abbr: "Лп"}, {id: 48, name: "Липа серцелиста", abbr: "Лпс"},
+ {id: 49, name: "Липа широколиста", abbr: "Лпш"}, {id: 59, name: "Ліщина ведмежа", abbr: "Лщв"}, {id: 55, name: "Ліщина звичайна", abbr: "Лщз"},
+ {id: 3, name: "Модрина європейська", abbr: "Мдє"}, {id: 30, name: "Осика", abbr: "Ос"}, {id: 62, name: "Падуб звичайний", abbr: "Пдз"},
+ {id: 5, name: "Псевдотсуга Мензіса (дугласія)", abbr: "Дгл"}, {id: 39, name: "Робінія звичайна", abbr: "Рбз"}, {id: 42, name: "Сосна Веймутова", abbr: "Све"},
+ {id: 28, name: "Сосна гірська", abbr: "Сг"}, {id: 4, name: "Сосна звичайна", abbr: "Сз"}, {id: 29, name: "Сосна кедрова європейська", abbr: "Скд"},
+ {id: 52, name: "Сосна чорна", abbr: "Сч"}, {id: 6, name: "Тис ягідний", abbr: "Тся"}, {id: 61, name: "Тополя біла", abbr: "Тб"},
+ {id: 22, name: "Туя", abbr: "Ту"}, {id: 35, name: "Хмелеграб звичайний", abbr: "Хгз"}, {id: 60, name: "Черемха звичайна", abbr: "Чрз"}, {id: 56, name: "Черемха пізня", abbr: "Чрп"},
+ {id: 11, name: "Черешня", abbr: "Чр"}, {id: 63, name: "Яблуня лісова", abbr: "Ябл"}, {id: 1, name: "Ялина колюча", abbr: "Ялк"},
+ {id: 50, name: "Ялиця (екзотична)", abbr: "Яц"}, {id: 2, name: "Ялиця біла", abbr: "Яцб"}, {id: 53, name: "Ясен білоцвітий", abbr: "Ябц"}, {id: 7, name: "Ясен звичайний", abbr: "Яз"}
  ];
 
  // --- State ---
@@ -2131,7 +2131,7 @@
  }
 
  const lower = query.toLowerCase();
- const filtered = sylvoSpeciesDB.filter(s => s.name.toLowerCase().includes(lower));
+ const filtered = sylvoSpeciesDB.filter(s => s.name.toLowerCase().includes(lower) || (s.abbr && s.abbr.toLowerCase().includes(lower)));
 
  if(filtered.length === 0) {
  resDiv.classList.add('hidden');
@@ -2143,7 +2143,7 @@
  filtered.forEach(s => {
  const div = document.createElement('div');
  div.className = "p-2 hover:bg-indigo-50 cursor-pointer flex justify-between items-center border-b border-slate-50 last:border-0";
- div.innerHTML = `<span class="text-xs text-slate-700">${s.name}</span> <span class="text-xs font-bold text-indigo-700 bg-indigo-100 px-1.5 py-0.5 rounded">${s.id}</span>`;
+ div.innerHTML = `<span class="text-xs text-slate-700">${s.name}${s.abbr ? ` <span class="text-slate-400">(${s.abbr})</span>` : ''}</span> <span class="text-xs font-bold text-indigo-700 bg-indigo-100 px-1.5 py-0.5 rounded">${s.id}</span>`;
  div.onclick = () => {
  // Copy ID to clipboard
  navigator.clipboard.writeText(s.id).then(() => showToast(t('id_copied', {id: s.id})));
@@ -2158,8 +2158,8 @@
  let matches = 0;
  trees.forEach(t => {
  const spName = t.species.trim();
- // Find exact or close match in DB
- const found = sylvoSpeciesDB.find(db => db.name.toLowerCase() === spName.toLowerCase() || db.name.toLowerCase().startsWith(spName.toLowerCase()));
+ // Find exact or close match in DB, by full name or by abbreviation
+ const found = sylvoSpeciesDB.find(db => db.name.toLowerCase() === spName.toLowerCase() || db.name.toLowerCase().startsWith(spName.toLowerCase()) || (db.abbr && db.abbr.toLowerCase() === spName.toLowerCase()));
  if(found && !speciesIdMap[spName]) {
  speciesIdMap[spName] = found.id;
  matches++;
